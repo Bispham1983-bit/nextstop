@@ -1,0 +1,14 @@
+{
+  "name": "nextstop-backend",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "start": "bun src/index.ts"
+  },
+  "dependencies": {
+    "hono": "^4.5.3"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}
