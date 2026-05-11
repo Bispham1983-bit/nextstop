@@ -179,7 +179,7 @@ export function Home() {
         sunriseHour={sunriseHour} sunsetHour={sunsetHour} tropical={tropical}
         sceneType={(event?.scene_type as SceneType) ?? 'beach'} />
 
-      <div className="relative z-10 w-full max-w-md text-center text-white mt-16">
+      <div className="relative z-10 w-full max-w-md text-center text-white mt-4">
 
         <p className="text-xs font-semibold tracking-[0.35em] uppercase text-white/80 mb-5"
           style={{ textShadow: '0 1px 6px rgba(0,0,0,0.5)' }}>
