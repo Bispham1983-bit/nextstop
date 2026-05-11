@@ -173,7 +173,7 @@ export function Home() {
   const travelIcon  = TRAVEL_ICON[travelMode] ?? '✈'
 
   return (
-    <div className="min-h-screen relative overflow-hidden flex flex-col items-center justify-center px-4 py-10">
+    <div className="min-h-screen relative overflow-hidden flex flex-col items-center justify-center px-4 py-6">
 
       <SceneBackground hour={hour} weatherCode={weather?.weather_code ?? 0}
         sunriseHour={sunriseHour} sunsetHour={sunsetHour} tropical={tropical}
