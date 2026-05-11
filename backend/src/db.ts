@@ -1,6 +1,6 @@
 import { Database } from 'bun:sqlite'
 
-export const db = new Database('./nextstop.db', { create: true })
+export const db = new Database(process.env.DB_PATH ?? './nextstop.db', { create: true })
 
 db.run(`
   CREATE TABLE IF NOT EXISTS events (

@@ -1,0 +1,12 @@
+services:
+  nextstop:
+    build: .
+    container_name: nextstop
+    ports:
+      - "3001:3001"
+    volumes:
+      - nextstop_data:/data
+    restart: unless-stopped
+
+volumes:
+  nextstop_data:
