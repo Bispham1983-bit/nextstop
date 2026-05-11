@@ -22,3 +22,25 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 input[type="date"] {
   color-scheme: dark;
 }
+
+@keyframes wave-drift {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+@keyframes ripple-drift {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+@keyframes cloud-drift {
+  from { transform: translateX(20vw); }
+  to   { transform: translateX(-130vw); }
+}
+
+@keyframes rain-streak {
+  0%   { transform: rotate(12deg) translateY(-8px);  opacity: 0; }
+  15%  { opacity: 0.75; }
+  85%  { opacity: 0.75; }
+  100% { transform: rotate(12deg) translateY(24px);  opacity: 0; }
+}

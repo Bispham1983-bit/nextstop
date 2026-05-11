@@ -7,10 +7,16 @@ db.run(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     destination TEXT NOT NULL,
+    location TEXT NOT NULL DEFAULT '',
     departure_date TEXT NOT NULL,
     booking_date TEXT NOT NULL
   )
 `)
+
+// Migrations
+try { db.run('ALTER TABLE events ADD COLUMN location TEXT NOT NULL DEFAULT ""') } catch { /* already exists */ }
+try { db.run("ALTER TABLE events ADD COLUMN scene_type TEXT NOT NULL DEFAULT 'beach'") } catch { /* already exists */ }
+try { db.run("ALTER TABLE events ADD COLUMN travel_mode TEXT NOT NULL DEFAULT 'plane'") } catch { /* already exists */ }
 
 db.run(`
   CREATE TABLE IF NOT EXISTS settings (
