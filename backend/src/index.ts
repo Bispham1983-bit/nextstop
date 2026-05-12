@@ -95,6 +95,58 @@ app.delete('/api/events/:id', requireAuth, async (c) => {
   return c.json({ success: true })
 })
 
+// ── Share / Join ───────────────────────────────────────────────────────────────
+app.post('/api/share', requireAuth, async (c) => {
+  const { event_ids } = await c.req.json()
+  if (!Array.isArray(event_ids) || event_ids.length === 0)
+    return c.json({ error: 'No events specified' }, 400)
+
+  // Verify all events belong to this user
+  for (const id of event_ids) {
+    const ev = db.query('SELECT id FROM events WHERE id = ? AND user_id = ?').get(id, c.get('userId'))
+    if (!ev) return c.json({ error: 'Event not found' }, 404)
+  }
+
+  const token = crypto.randomUUID()
+  db.run('INSERT INTO share_links (token, event_ids, created_by) VALUES (?, ?, ?)',
+    [token, JSON.stringify(event_ids), c.get('userId')])
+  return c.json({ token })
+})
+
+app.get('/api/join/:token', async (c) => {
+  const link = db.query('SELECT event_ids FROM share_links WHERE token = ?')
+    .get(c.req.param('token')) as { event_ids: string } | null
+  if (!link) return c.json({ error: 'Not found' }, 404)
+
+  const ids = JSON.parse(link.event_ids) as number[]
+  const events = ids
+    .map(id => db.query(
+      'SELECT name, destination, location, scene_type, travel_mode, departure_date, booking_date FROM events WHERE id = ?'
+    ).get(id))
+    .filter(Boolean)
+  return c.json(events)
+})
+
+app.post('/api/join/:token', requireAuth, async (c) => {
+  const link = db.query('SELECT event_ids FROM share_links WHERE token = ?')
+    .get(c.req.param('token')) as { event_ids: string } | null
+  if (!link) return c.json({ error: 'Not found' }, 404)
+
+  const ids = JSON.parse(link.event_ids) as number[]
+  const userId = c.get('userId')
+  let count = 0
+  for (const id of ids) {
+    const ev = db.query('SELECT * FROM events WHERE id = ?').get(id) as any
+    if (!ev) continue
+    db.run(
+      'INSERT INTO events (user_id, name, destination, location, scene_type, travel_mode, departure_date, booking_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [userId, ev.name, ev.destination, ev.location, ev.scene_type, ev.travel_mode, ev.departure_date, ev.booking_date]
+    )
+    count++
+  }
+  return c.json({ success: true, count })
+})
+
 // ── Weather ────────────────────────────────────────────────────────────────────
 interface WeatherCache { data: object; timestamp: number }
 const weatherCache = new Map<string, WeatherCache>()

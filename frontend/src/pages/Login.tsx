@@ -12,6 +12,8 @@ export function Login() {
   const [error, setError]     = useState('')
   const [loading, setLoading] = useState(false)
 
+  const next = new URLSearchParams(window.location.search).get('next') || '/'
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -22,7 +24,7 @@ export function Login() {
       } else {
         await register(email, password, name)
       }
-      navigate('/')
+      navigate(next)
     } catch (err: any) {
       setError(err.message)
     }

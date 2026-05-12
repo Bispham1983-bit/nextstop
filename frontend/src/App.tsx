@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import { Home }  from './pages/Home'
 import { Admin } from './pages/Admin'
 import { Login } from './pages/Login'
+import { Join }  from './pages/Join'
 
 function Protected({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -16,9 +17,10 @@ function AppRoutes() {
   if (loading) return null
   return (
     <Routes>
-      <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
-      <Route path="/"      element={<Protected><Home /></Protected>} />
-      <Route path="/admin" element={<Protected><Admin /></Protected>} />
+      <Route path="/login"       element={user ? <Navigate to="/" replace /> : <Login />} />
+      <Route path="/join/:token" element={<Join />} />
+      <Route path="/"            element={<Protected><Home /></Protected>} />
+      <Route path="/admin"       element={<Protected><Admin /></Protected>} />
     </Routes>
   )
 }

@@ -37,6 +37,15 @@ db.run(`
   )
 `)
 
+db.run(`
+  CREATE TABLE IF NOT EXISTS share_links (
+    token      TEXT    PRIMARY KEY,
+    event_ids  TEXT    NOT NULL,
+    created_by INTEGER NOT NULL,
+    created_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+  )
+`)
+
 // ── Migrations (safe, idempotent) ──────────────────────────────────────────────
 const cols = (db.query("PRAGMA table_info(events)").all() as { name: string }[]).map(r => r.name)
 if (!cols.includes('user_id'))     try { db.run('ALTER TABLE events ADD COLUMN user_id INTEGER NOT NULL DEFAULT 0') } catch {}
