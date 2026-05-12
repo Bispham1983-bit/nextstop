@@ -209,9 +209,17 @@ app.get('/api/users/search', requireAuth, (c) => {
   const q = (c.req.query('q') ?? '').trim()
   if (q.length < 2) return c.json([])
   const userId = c.get('userId')
-  const users = db.query(
-    'SELECT id, name, email FROM users WHERE (name LIKE ? OR email LIKE ?) AND id != ? LIMIT 10'
-  ).all(`%${q}%`, `%${q}%`, userId)
+  const users = db.query(`
+    SELECT u.id, u.name, u.email,
+      f.id as friendship_id,
+      f.status as friendship_status,
+      CASE WHEN f.addressee_id = ? THEN 1 ELSE 0 END as is_addressee
+    FROM users u
+    LEFT JOIN friendships f ON (f.requester_id = u.id AND f.addressee_id = ?)
+                            OR (f.addressee_id = u.id AND f.requester_id = ?)
+    WHERE (u.name LIKE ? OR u.email LIKE ?) AND u.id != ?
+    LIMIT 10
+  `).all(userId, userId, userId, `%${q}%`, `%${q}%`, userId)
   return c.json(users)
 })
 
@@ -229,7 +237,7 @@ app.get('/api/friends', requireAuth, (c) => {
     WHERE f.requester_id = ? AND f.status = 'pending'
   `).all(userId)
   const received = db.query(`
-    SELECT f.id, u.name, u.email FROM friendships f
+    SELECT f.id, u.id as requester_id, u.name as requester_name, u.email as requester_email FROM friendships f
     JOIN users u ON u.id = f.requester_id
     WHERE f.addressee_id = ? AND f.status = 'pending'
   `).all(userId)
@@ -237,15 +245,15 @@ app.get('/api/friends', requireAuth, (c) => {
 })
 
 app.post('/api/friends/request', requireAuth, async (c) => {
-  const { to_user_id } = await c.req.json()
+  const { addressee_id } = await c.req.json()
   const userId = c.get('userId')
   const existing = db.query(
     'SELECT id FROM friendships WHERE (requester_id=? AND addressee_id=?) OR (requester_id=? AND addressee_id=?)'
-  ).get(userId, to_user_id, to_user_id, userId)
+  ).get(userId, addressee_id, addressee_id, userId)
   if (existing) return c.json({ error: 'Already connected' }, 409)
-  const result = db.run('INSERT INTO friendships (requester_id, addressee_id) VALUES (?, ?)', [userId, to_user_id]) as { lastInsertRowid: number }
+  const result = db.run('INSERT INTO friendships (requester_id, addressee_id) VALUES (?, ?)', [userId, addressee_id]) as { lastInsertRowid: number }
   const sender = db.query('SELECT name FROM users WHERE id = ?').get(userId) as { name: string }
-  sendPushToUser(to_user_id, { title: '👋 Friend request', body: `${sender.name} wants to be friends on Next Stop`, tag: `fr-${result.lastInsertRowid}` })
+  sendPushToUser(addressee_id, { title: '👋 Friend request', body: `${sender.name} wants to be friends on Next Stop`, tag: `fr-${result.lastInsertRowid}` })
   return c.json({ success: true, id: result.lastInsertRowid })
 })
 
@@ -263,12 +271,12 @@ app.put('/api/friends/:id/decline', requireAuth, (c) => {
 app.get('/api/notifications', requireAuth, (c) => {
   const userId = c.get('userId')
   const friendRequests = db.query(`
-    SELECT f.id, u.name, u.email, 'friend_request' as type
+    SELECT f.id, u.id as requester_id, u.name as requester_name, u.email as requester_email, 'friend_request' as type
     FROM friendships f JOIN users u ON u.id = f.requester_id
     WHERE f.addressee_id = ? AND f.status = 'pending'
   `).all(userId)
   const tripInvites = db.query(`
-    SELECT ti.id, ti.event_id, e.name as trip_name, u.name as from_name, 'trip_invite' as type
+    SELECT ti.id, ti.event_id, e.name as event_name, ti.from_user_id, u.name as from_user_name, 'trip_invite' as type
     FROM trip_invites ti
     JOIN events e ON e.id = ti.event_id
     JOIN users u ON u.id = ti.from_user_id
@@ -298,14 +306,20 @@ app.get('/api/trips/:id/friends-status', requireAuth, (c) => {
       .map(r => r.to_user_id)
   )
 
-  return c.json(friends.map(f => ({
-    id: f.id, name: f.name,
+  const friendsWithEmail = db.query(`
+    SELECT u.id, u.name, u.email FROM friendships f
+    JOIN users u ON u.id = CASE WHEN f.requester_id=? THEN f.addressee_id ELSE f.requester_id END
+    WHERE (f.requester_id=? OR f.addressee_id=?) AND f.status='accepted'
+  `).all(userId, userId, userId) as { id: number; name: string; email: string }[]
+
+  return c.json(friendsWithEmail.map(f => ({
+    id: f.id, name: f.name, email: f.email,
     status: memberIds.has(f.id) ? 'member' : invitedIds.has(f.id) ? 'invited' : 'none',
   })))
 })
 
 app.post('/api/trips/:id/invite', requireAuth, async (c) => {
-  const { to_user_id } = await c.req.json()
+  const { user_id: to_user_id } = await c.req.json()
   const userId = c.get('userId')
   const eventId = Number(c.req.param('id'))
   const creator = db.query('SELECT id FROM events WHERE id=? AND user_id=?').get(eventId, userId)
