@@ -87,7 +87,7 @@ export function Join() {
           <>
             <div className="text-center mb-6">
               <p className="text-white/60 text-sm mb-1">
-                {sharer ? <><span className="text-white font-semibold">{sharer}</span> has invited you to join</> : 'You've been invited to join'}
+                {sharer ? <><span className="text-white font-semibold">{sharer}</span> has invited you to join</> : "You've been invited to join"}
               </p>
               <h1 className="text-white text-3xl font-black">
                 {trips.length === 1 ? trips[0].name : `${trips.length} trips`}
