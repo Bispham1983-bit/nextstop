@@ -282,8 +282,22 @@ app.get('/api/notifications', requireAuth, (c) => {
     JOIN users u ON u.id = ti.from_user_id
     WHERE ti.to_user_id = ? AND ti.status = 'pending'
   `).all(userId)
+  const sentFriendRequests = db.query(`
+    SELECT f.id, u.id as addressee_id, u.name as addressee_name, 'sent_friend_request' as type
+    FROM friendships f JOIN users u ON u.id = f.addressee_id
+    WHERE f.requester_id = ? AND f.status = 'pending'
+  `).all(userId)
+  const sentTripInvites = db.query(`
+    SELECT ti.id, ti.event_id, e.name as event_name, ti.to_user_id, u.name as to_user_name, 'sent_trip_invite' as type
+    FROM trip_invites ti
+    JOIN events e ON e.id = ti.event_id
+    JOIN users u ON u.id = ti.to_user_id
+    WHERE ti.from_user_id = ? AND ti.status = 'pending'
+  `).all(userId)
+
   const items = [...friendRequests, ...tripInvites]
-  return c.json({ items, count: items.length })
+  const outgoing = [...sentFriendRequests, ...sentTripInvites]
+  return c.json({ items, outgoing, count: items.length })
 })
 
 // ── Trip invites ───────────────────────────────────────────────────────────────

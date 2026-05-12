@@ -18,10 +18,28 @@ interface TripInvite {
   created_at: number
 }
 
+interface SentFriendRequest {
+  id: number
+  addressee_id: number
+  addressee_name: string
+}
+
+interface SentTripInvite {
+  id: number
+  event_id: number
+  event_name: string
+  to_user_id: number
+  to_user_name: string
+}
+
 interface NotificationData {
   items: Array<
     | ({ type: 'friend_request' } & FriendRequest)
     | ({ type: 'trip_invite' } & TripInvite)
+  >
+  outgoing: Array<
+    | ({ type: 'sent_friend_request' } & SentFriendRequest)
+    | ({ type: 'sent_trip_invite' } & SentTripInvite)
   >
   count: number
 }
@@ -53,7 +71,7 @@ export function NotificationsPanel({ onClose, onCountChange }: {
   onCountChange: () => void
 }) {
   const apiFetch = useApiFetch()
-  const [notifs, setNotifs] = useState<NotificationData>({ items: [], count: 0 })
+  const [notifs, setNotifs] = useState<NotificationData>({ items: [], outgoing: [], count: 0 })
   const [friends, setFriends] = useState<FriendListData>({ friends: [], sent: [], received: [] })
   const [query, setQuery] = useState('')
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
@@ -202,6 +220,12 @@ export function NotificationsPanel({ onClose, onCountChange }: {
               </div>
             )}
 
+            {notifs.items.length > 0 && (
+              <p className="text-white/30 text-[10px] font-semibold tracking-widest uppercase px-1">
+                Needs your response
+              </p>
+            )}
+
             {notifs.items.map(item => {
               if (item.type === 'friend_request') {
                 const busy = actingId === item.id
@@ -249,6 +273,48 @@ export function NotificationsPanel({ onClose, onCountChange }: {
 
               return null
             })}
+
+            {/* Outgoing pending */}
+            {notifs.outgoing.length > 0 && (
+              <>
+                <p className="text-white/30 text-[10px] font-semibold tracking-widest uppercase px-1 pt-2">
+                  Waiting on a response
+                </p>
+                {notifs.outgoing.map(item => {
+                  if (item.type === 'sent_friend_request') {
+                    return (
+                      <div key={`sfr-${item.id}`}
+                        className="bg-white/5 rounded-2xl p-4 border border-white/10 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
+                          <span className="text-white/40 font-bold text-sm">{item.addressee_name.charAt(0).toUpperCase()}</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white/70 text-sm font-semibold truncate">{item.addressee_name}</p>
+                          <p className="text-white/30 text-xs">Friend request sent</p>
+                        </div>
+                        <span className="text-white/20 text-xs flex-shrink-0">Pending…</span>
+                      </div>
+                    )
+                  }
+                  if (item.type === 'sent_trip_invite') {
+                    return (
+                      <div key={`sti-${item.id}`}
+                        className="bg-white/5 rounded-2xl p-4 border border-white/10 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-purple-600/20 flex items-center justify-center flex-shrink-0">
+                          <span className="text-xl">✈️</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white/70 text-sm font-semibold truncate">{item.event_name}</p>
+                          <p className="text-white/30 text-xs">Invited {item.to_user_name}</p>
+                        </div>
+                        <span className="text-white/20 text-xs flex-shrink-0">Pending…</span>
+                      </div>
+                    )
+                  }
+                  return null
+                })}
+              </>
+            )}
           </>
         )}
 
