@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useAuth, useApiFetch } from '../context/AuthContext'
 
 type SceneType = 'beach' | 'countryside' | 'mountains' | 'city'
 type TravelMode = 'plane' | 'car' | 'boat'
@@ -38,12 +39,11 @@ function daysUntil(d: string) {
 }
 
 export function Admin() {
-  const [authenticated, setAuthenticated] = useState(false)
-  const [password, setPassword] = useState('')
-  const [authError, setAuthError] = useState('')
+  const { user, logout } = useAuth()
+  const apiFetch = useApiFetch()
 
   const [events, setEvents] = useState<Event[]>([])
-  const [editingId, setEditingId] = useState<number | null>(null)   // null = new
+  const [editingId, setEditingId] = useState<number | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ ...EMPTY_FORM })
 
@@ -59,25 +59,12 @@ export function Admin() {
     }`
 
   const loadEvents = async () => {
-    const res = await fetch('/api/events')
+    const res = await apiFetch('/api/events')
     const data = await res.json()
     setEvents(Array.isArray(data) ? data : [])
   }
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setAuthError('')
-    try {
-      const res = await fetch('/api/auth', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
-      })
-      const { valid } = await res.json()
-      if (!valid) { setAuthError('Wrong password'); return }
-      setAuthenticated(true)
-      await loadEvents()
-    } catch { setAuthError('Connection error') }
-  }
+  useEffect(() => { loadEvents() }, [])
 
   const handleEdit = (event: Event) => {
     setEditingId(event.id)
@@ -106,9 +93,9 @@ export function Admin() {
     try {
       const url    = editingId ? `/api/events/${editingId}` : '/api/events'
       const method = editingId ? 'PUT' : 'POST'
-      const res = await fetch(url, {
-        method, headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, password }),
+      const res = await apiFetch(url, {
+        method,
+        body: JSON.stringify(form),
       })
       if (res.ok) {
         await loadEvents()
@@ -124,10 +111,7 @@ export function Admin() {
     if (!confirm('Delete this trip?')) return
     setDeleting(id)
     try {
-      await fetch(`/api/events/${id}`, {
-        method: 'DELETE', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
-      })
+      await apiFetch(`/api/events/${id}`, { method: 'DELETE' })
       await loadEvents()
     } catch { /* ignore */ }
     setDeleting(null)
@@ -145,26 +129,19 @@ export function Admin() {
             ← Next Stop
           </a>
           <h1 className="text-white text-2xl font-bold mt-2">My Trips</h1>
+          {user && (
+            <div className="flex items-center justify-center gap-3 mt-3">
+              <p className="text-white/40 text-xs">{user.name}</p>
+              <button onClick={logout}
+                className="text-white/30 hover:text-white/60 text-xs transition-colors underline underline-offset-2">
+                Sign out
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Login */}
-        {!authenticated && (
-          <form onSubmit={handleLogin} className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 space-y-4">
-            <div>
-              <label className={labelClass}>Password</label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)}
-                className={inputClass} placeholder="Enter password" autoFocus autoComplete="current-password" />
-            </div>
-            {authError && <p className="text-red-400 text-sm">{authError}</p>}
-            <button type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 rounded-xl transition-colors">
-              Login
-            </button>
-          </form>
-        )}
-
         {/* Trip list */}
-        {authenticated && !showForm && (
+        {!showForm && (
           <div className="space-y-3">
             {events.length === 0 && (
               <p className="text-white/40 text-center py-8 text-sm">No trips yet — add one below!</p>
@@ -209,7 +186,7 @@ export function Admin() {
         )}
 
         {/* Add / Edit form */}
-        {authenticated && showForm && (
+        {showForm && (
           <form onSubmit={handleSave} className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20 space-y-5">
             <h2 className="text-white font-bold text-lg">{editingId ? 'Edit Trip' : 'New Trip'}</h2>
 

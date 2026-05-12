@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useLayoutEffect } from 'react'
 import { FlightPath } from '../components/FlightPath'
 import { SceneBackground } from '../components/SceneBackground'
+import { useAuth, useApiFetch } from '../context/AuthContext'
 
 type SceneType = 'beach' | 'countryside' | 'mountains' | 'city'
 type TravelMode = 'plane' | 'car' | 'boat'
@@ -171,16 +172,45 @@ function TripGrid({ events, onSelect }: { events: Event[]; onSelect: (i: number)
   )
 }
 
-function SettingsIcon() {
+function TopBar({ onLogout }: { onLogout: () => void }) {
+  const { user } = useAuth()
+  const [menuOpen, setMenuOpen] = useState(false)
   return (
-    <a href="/admin" className="absolute top-4 right-4 z-20 p-2 rounded-full"
-      style={{ background: 'rgba(0,0,0,0.25)', backdropFilter: 'blur(8px)' }}>
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)"
-        strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="3" />
-        <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-      </svg>
-    </a>
+    <>
+      <button onClick={() => setMenuOpen(o => !o)}
+        className="absolute top-4 right-4 z-20 p-2 rounded-full"
+        style={{ background: 'rgba(0,0,0,0.25)', backdropFilter: 'blur(8px)' }}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)"
+          strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="3" />
+          <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+        </svg>
+      </button>
+      {menuOpen && (
+        <div className="absolute top-14 right-4 z-30 rounded-2xl overflow-hidden border border-white/20 min-w-[160px]"
+          style={{ background: 'rgba(10,15,46,0.95)', backdropFilter: 'blur(20px)' }}>
+          <div className="px-4 py-3 border-b border-white/10">
+            <p className="text-white/40 text-xs">Signed in as</p>
+            <p className="text-white text-sm font-semibold truncate">{user?.name}</p>
+          </div>
+          <a href="/admin" onClick={() => setMenuOpen(false)}
+            className="flex items-center gap-3 px-4 py-3 text-white/80 hover:text-white hover:bg-white/10 transition-colors text-sm">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+            Manage trips
+          </a>
+          <button onClick={() => { setMenuOpen(false); onLogout() }}
+            className="w-full flex items-center gap-3 px-4 py-3 text-white/80 hover:text-white hover:bg-white/10 transition-colors text-sm text-left border-t border-white/10">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>
+            </svg>
+            Sign out
+          </button>
+        </div>
+      )}
+    </>
   )
 }
 
@@ -311,6 +341,8 @@ function EventSlide({ event, weather }: { event: Event; weather: Weather | null 
 }
 
 export function Home() {
+  const { logout } = useAuth()
+  const apiFetch = useApiFetch()
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
   const [activeIndex, setActiveIndex] = useState(0)
@@ -320,7 +352,7 @@ export function Home() {
   const jumpIndexRef = useRef<number | null>(null)
 
   useEffect(() => {
-    fetch('/api/events')
+    apiFetch('/api/events')
       .then(r => r.json())
       .then(data => { setEvents(Array.isArray(data) ? data : []); setLoading(false) })
       .catch(() => setLoading(false))
@@ -330,7 +362,7 @@ export function Home() {
   const fetchWeather = useCallback((event: Event) => {
     const loc = event.location || event.destination
     if (!loc || weatherMap[loc]) return
-    fetch(`/api/weather?location=${encodeURIComponent(loc)}`)
+    apiFetch(`/api/weather?location=${encodeURIComponent(loc)}`)
       .then(r => r.json())
       .then(data => { if (data) setWeatherMap(m => ({ ...m, [loc]: data })) })
       .catch(() => {})
@@ -383,7 +415,7 @@ export function Home() {
         sceneType={(activeEvent?.scene_type as SceneType) ?? 'beach'}
       />
 
-      <SettingsIcon />
+      <TopBar onLogout={logout} />
 
       {/* Grid toggle — only show when there are multiple trips */}
       {events.length > 1 && (
