@@ -259,8 +259,8 @@ function EventSlide({ event, weather }: { event: Event; weather: Weather | null 
   const travelIcon = TRAVEL_ICON[travelMode] ?? '✈'
 
   return (
-    <div className="w-full flex-shrink-0 flex flex-col items-center justify-center px-4 py-10 relative"
-      style={{ minWidth: '100vw', minHeight: '100dvh' }}>
+    <div className="flex-shrink-0 flex flex-col items-center justify-center px-4 py-10 relative"
+      style={{ width: '100vw', height: '100dvh', scrollSnapAlign: 'start' }}>
 
       <div className="relative z-10 w-full max-w-md text-center text-white">
 
@@ -475,14 +475,14 @@ export function Home() {
 
         {loading && (
           <div className="flex-shrink-0 flex items-center justify-center text-white/50 text-lg animate-pulse"
-            style={{ minWidth: '100vw' }}>
+            style={{ width: '100vw', height: '100dvh', scrollSnapAlign: 'start' }}>
             Loading...
           </div>
         )}
 
         {!loading && events.length === 0 && (
           <div className="flex-shrink-0 flex flex-col items-center justify-center gap-4"
-            style={{ minWidth: '100vw' }}>
+            style={{ width: '100vw', height: '100dvh', scrollSnapAlign: 'start' }}>
             <p className="text-3xl font-bold text-white/60">No adventures yet</p>
             <a href="/admin" className="text-sm text-white/50 underline underline-offset-4">Add your first trip →</a>
           </div>
