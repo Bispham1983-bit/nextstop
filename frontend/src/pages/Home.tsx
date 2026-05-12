@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, useLayoutEffect } from 'react'
 import { FlightPath } from '../components/FlightPath'
 import { SceneBackground } from '../components/SceneBackground'
 
@@ -109,6 +109,67 @@ function formatDate(dateStr: string) {
 }
 
 const TRAVEL_ICON: Record<string, string> = { plane: '✈', car: '🚗', boat: '⛵' }
+
+const SCENE_GRAD: Record<string, string> = {
+  beach:       'linear-gradient(150deg, #005f99 0%, #0096c7 45%, #06b6d4 100%)',
+  countryside: 'linear-gradient(150deg, #0369a1 0%, #2d5a2d 55%, #4d7d4d 100%)',
+  mountains:   'linear-gradient(150deg, #0c2a4a 0%, #4a5568 55%, #6b7a90 100%)',
+  city:        'linear-gradient(150deg, #060d1e 0%, #1a2540 50%, #2a3852 100%)',
+}
+
+function daysUntil(dateStr: string): { n: number; label: string; departed: boolean } {
+  const diff = new Date(dateStr).getTime() - Date.now()
+  if (diff < 0) return { n: 0, label: 'Departed', departed: true }
+  const n = Math.ceil(diff / 86400000)
+  return { n, label: n === 1 ? 'day' : 'days', departed: false }
+}
+
+function TripGrid({ events, onSelect }: { events: Event[]; onSelect: (i: number) => void }) {
+  return (
+    <div className="fixed inset-0 z-30 overflow-y-auto"
+      style={{ background: 'rgba(5,10,30,0.97)', backdropFilter: 'blur(20px)' }}>
+      <div className="px-4 pt-14 pb-8">
+        <p className="text-white/50 text-xs font-semibold tracking-[0.3em] uppercase text-center mb-6">
+          All Trips
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          {events.map((event, i) => {
+            const { n, label, departed } = daysUntil(event.departure_date)
+            const grad = SCENE_GRAD[event.scene_type] ?? SCENE_GRAD.beach
+            return (
+              <button key={event.id} onClick={() => onSelect(i)}
+                className="relative rounded-2xl overflow-hidden text-left"
+                style={{ background: grad, minHeight: 160,
+                  boxShadow: '0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1)' }}>
+                {/* Travel icon */}
+                <span className="absolute top-3 right-3 text-sm opacity-70">
+                  {TRAVEL_ICON[event.travel_mode] ?? '✈'}
+                </span>
+                {/* Days countdown */}
+                <div className="absolute top-3 left-4">
+                  {departed ? (
+                    <span className="text-xs font-bold text-white/50 uppercase tracking-wider">Departed</span>
+                  ) : (
+                    <>
+                      <span className="text-4xl font-black text-white leading-none drop-shadow">{n}</span>
+                      <span className="text-white/70 text-xs font-semibold ml-1">{label}</span>
+                    </>
+                  )}
+                </div>
+                {/* Trip name + location */}
+                <div className="absolute bottom-0 left-0 right-0 px-4 py-3"
+                  style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.55), transparent)' }}>
+                  <p className="text-white font-black text-base leading-tight truncate">{event.name}</p>
+                  <p className="text-white/60 text-xs truncate mt-0.5">{event.location || event.destination}</p>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function SettingsIcon() {
   return (
@@ -253,8 +314,10 @@ export function Home() {
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
   const [activeIndex, setActiveIndex] = useState(0)
+  const [showGrid, setShowGrid] = useState(false)
   const [weatherMap, setWeatherMap] = useState<Record<string, Weather>>({})
   const scrollRef = useRef<HTMLDivElement>(null)
+  const jumpIndexRef = useRef<number | null>(null)
 
   useEffect(() => {
     fetch('/api/events')
@@ -286,6 +349,21 @@ export function Home() {
     setActiveIndex(Math.max(0, Math.min(index, events.length - 1)))
   }, [events.length])
 
+  const jumpTo = useCallback((i: number) => {
+    jumpIndexRef.current = i
+    setActiveIndex(i)
+    setShowGrid(false)
+  }, [])
+
+  // After grid closes, scroll carousel to the selected index instantly
+  useLayoutEffect(() => {
+    if (showGrid || jumpIndexRef.current === null) return
+    const el = scrollRef.current
+    if (!el) return
+    el.scrollTo({ left: jumpIndexRef.current * el.offsetWidth, behavior: 'instant' as ScrollBehavior })
+    jumpIndexRef.current = null
+  }, [showGrid])
+
   const activeEvent  = events[activeIndex] ?? null
   const activeWeather = activeEvent ? (weatherMap[activeEvent.location || activeEvent.destination] ?? null) : null
   const hour         = activeWeather ? getDestinationHour(activeWeather.timezone) : new Date().getHours()
@@ -306,6 +384,29 @@ export function Home() {
       />
 
       <SettingsIcon />
+
+      {/* Grid toggle — only show when there are multiple trips */}
+      {events.length > 1 && (
+        <button onClick={() => setShowGrid(g => !g)}
+          className="absolute top-4 left-4 z-20 p-2 rounded-full"
+          style={{ background: 'rgba(0,0,0,0.25)', backdropFilter: 'blur(8px)' }}>
+          {showGrid ? (
+            // X to close grid
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)"
+              strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          ) : (
+            // Grid icon
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)"
+              strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+              <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+            </svg>
+          )}
+        </button>
+      )}
+
+      {/* Grid overlay */}
+      {showGrid && <TripGrid events={events} onSelect={jumpTo} />}
 
       {/* Swipeable carousel */}
       <div ref={scrollRef} onScroll={handleScroll}
