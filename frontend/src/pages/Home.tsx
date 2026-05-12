@@ -16,6 +16,15 @@ interface Event {
   travel_mode: string
   departure_date: string
   booking_date: string
+  going: string       // pipe-separated names e.g. "Sam|Donna|Claire"
+  is_creator: number  // 1 or 0
+}
+
+function formatGoing(going: string): string | null {
+  const names = going ? going.split('|').filter(Boolean) : []
+  if (names.length <= 1) return null
+  if (names.length === 2) return `Going with ${names[0]} & ${names[1]}`
+  return `Going with ${names.slice(0, -1).join(', ')} & ${names[names.length - 1]}`
 }
 
 interface ForecastDay {
@@ -285,9 +294,15 @@ function EventSlide({ event, weather }: { event: Event; weather: Weather | null 
         <h1 className="text-6xl sm:text-7xl font-black tracking-tight leading-none mb-1 drop-shadow-lg">
           {event.name}
         </h1>
-        <p className="text-white/50 text-sm font-medium mb-5 tracking-wide drop-shadow">
+        <p className="text-white/50 text-sm font-medium tracking-wide drop-shadow">
           {event.location}
         </p>
+        {formatGoing(event.going) && (
+          <p className="text-white/40 text-xs font-medium mt-1 mb-5 drop-shadow">
+            {formatGoing(event.going)}
+          </p>
+        )}
+        {!formatGoing(event.going) && <div className="mb-5" />}
 
         {/* Weather card */}
         {weather && (

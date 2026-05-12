@@ -90,7 +90,23 @@ app.get('/api/auth/me', requireAuth, (c) => {
 
 // ── Events ─────────────────────────────────────────────────────────────────────
 app.get('/api/events', requireAuth, (c) => {
-  const events = db.query('SELECT * FROM events WHERE user_id = ? ORDER BY departure_date ASC').all(c.get('userId'))
+  const userId = c.get('userId')
+  const events = db.query(`
+    SELECT DISTINCT e.*,
+      CASE WHEN e.user_id = ? THEN 1 ELSE 0 END as is_creator,
+      COALESCE((
+        SELECT GROUP_CONCAT(n, '|') FROM (
+          SELECT u1.name as n FROM users u1 WHERE u1.id = e.user_id
+          UNION
+          SELECT u2.name as n FROM event_members em2
+          JOIN users u2 ON u2.id = em2.user_id
+          WHERE em2.event_id = e.id
+        )
+      ), '') as going
+    FROM events e
+    WHERE e.user_id = ? OR e.id IN (SELECT event_id FROM event_members WHERE user_id = ?)
+    ORDER BY e.departure_date ASC
+  `).all(userId, userId, userId)
   return c.json(events)
 })
 
@@ -123,10 +139,12 @@ app.post('/api/share', requireAuth, async (c) => {
   if (!Array.isArray(event_ids) || event_ids.length === 0)
     return c.json({ error: 'No events specified' }, 400)
 
-  // Verify all events belong to this user
+  // Verify user is creator or member of each event
+  const userId = c.get('userId')
   for (const id of event_ids) {
-    const ev = db.query('SELECT id FROM events WHERE id = ? AND user_id = ?').get(id, c.get('userId'))
-    if (!ev) return c.json({ error: 'Event not found' }, 404)
+    const creator = db.query('SELECT id FROM events WHERE id = ? AND user_id = ?').get(id, userId)
+    const member  = db.query('SELECT 1 FROM event_members WHERE event_id = ? AND user_id = ?').get(id, userId)
+    if (!creator && !member) return c.json({ error: 'Event not found' }, 404)
   }
 
   const token = crypto.randomUUID()
@@ -159,12 +177,12 @@ app.post('/api/join/:token', requireAuth, async (c) => {
   const userId = c.get('userId')
   let count = 0
   for (const id of ids) {
-    const ev = db.query('SELECT * FROM events WHERE id = ?').get(id) as any
+    const ev = db.query('SELECT id, user_id FROM events WHERE id = ?').get(id) as { id: number; user_id: number } | null
     if (!ev) continue
-    db.run(
-      'INSERT INTO events (user_id, name, destination, location, scene_type, travel_mode, departure_date, booking_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [userId, ev.name, ev.destination, ev.location, ev.scene_type, ev.travel_mode, ev.departure_date, ev.booking_date]
-    )
+    // Skip if user is already the creator
+    if (ev.user_id === userId) continue
+    // Add as member (ignore if already a member)
+    db.run('INSERT OR IGNORE INTO event_members (event_id, user_id) VALUES (?, ?)', [id, userId])
     count++
   }
   return c.json({ success: true, count })

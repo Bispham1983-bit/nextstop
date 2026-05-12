@@ -78,6 +78,8 @@ interface Event {
   travel_mode: TravelMode
   departure_date: string
   booking_date: string
+  going: string
+  is_creator: number
 }
 
 const EMPTY_FORM = {
@@ -283,7 +285,7 @@ export function Admin() {
                 {/* Action buttons — hidden in select mode */}
                 {!selectMode && (
                   <div className="flex gap-2 flex-shrink-0">
-                    {/* Share */}
+                    {/* Share — available to all members */}
                     <button onClick={() => handleShare([event.id])} disabled={sharing}
                       className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors disabled:opacity-50">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white"
@@ -292,24 +294,31 @@ export function Admin() {
                         <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
                       </svg>
                     </button>
-                    {/* Edit */}
-                    <button onClick={() => handleEdit(event)}
-                      className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white"
-                        strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-                        <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                      </svg>
-                    </button>
-                    {/* Delete */}
-                    <button onClick={() => handleDelete(event.id)} disabled={deleting === event.id}
-                      className="p-2 rounded-lg bg-white/10 hover:bg-red-500/40 transition-colors disabled:opacity-50">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white"
-                        strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
-                        <path d="M10 11v6M14 11v6M9 6V4h6v2"/>
-                      </svg>
-                    </button>
+                    {/* Edit + Delete — creator only */}
+                    {event.is_creator === 1 ? (
+                      <>
+                        <button onClick={() => handleEdit(event)}
+                          className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white"
+                            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                          </svg>
+                        </button>
+                        <button onClick={() => handleDelete(event.id)} disabled={deleting === event.id}
+                          className="p-2 rounded-lg bg-white/10 hover:bg-red-500/40 transition-colors disabled:opacity-50">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white"
+                            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/>
+                            <path d="M10 11v6M14 11v6M9 6V4h6v2"/>
+                          </svg>
+                        </button>
+                      </>
+                    ) : (
+                      <span className="px-2 py-1 rounded-lg bg-white/5 text-white/30 text-xs self-center">
+                        Shared
+                      </span>
+                    )}
                   </div>
                 )}
               </div>

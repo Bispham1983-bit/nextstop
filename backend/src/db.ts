@@ -38,6 +38,17 @@ db.run(`
 `)
 
 db.run(`
+  CREATE TABLE IF NOT EXISTS event_members (
+    event_id   INTEGER NOT NULL,
+    user_id    INTEGER NOT NULL,
+    joined_at  INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+    PRIMARY KEY (event_id, user_id),
+    FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id)  REFERENCES users(id)  ON DELETE CASCADE
+  )
+`)
+
+db.run(`
   CREATE TABLE IF NOT EXISTS share_links (
     token      TEXT    PRIMARY KEY,
     event_ids  TEXT    NOT NULL,
