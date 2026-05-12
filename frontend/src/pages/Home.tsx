@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback, useLayoutEffect } from 'react
 import { FlightPath } from '../components/FlightPath'
 import { SceneBackground } from '../components/SceneBackground'
 import { useAuth, useApiFetch } from '../context/AuthContext'
+import { usePushNotifications } from '../hooks/usePushNotifications'
 
 type SceneType = 'beach' | 'countryside' | 'mountains' | 'city' | 'camping' | 'festival' | 'gig'
 type TravelMode = 'plane' | 'car' | 'boat'
@@ -202,6 +203,7 @@ function TripGrid({ events, weatherMap, onSelect }: { events: Event[]; weatherMa
 
 function TopBar({ onLogout }: { onLogout: () => void }) {
   const { user } = useAuth()
+  const { status: notifStatus, enable: enableNotifs } = usePushNotifications()
   const [menuOpen, setMenuOpen] = useState(false)
   return (
     <>
@@ -215,7 +217,7 @@ function TopBar({ onLogout }: { onLogout: () => void }) {
         </svg>
       </button>
       {menuOpen && (
-        <div className="absolute top-14 right-4 z-30 rounded-2xl overflow-hidden border border-white/20 min-w-[160px]"
+        <div className="absolute top-14 right-4 z-30 rounded-2xl overflow-hidden border border-white/20 min-w-[170px]"
           style={{ background: 'rgba(10,15,46,0.95)', backdropFilter: 'blur(20px)' }}>
           <div className="px-4 py-3 border-b border-white/10">
             <p className="text-white/40 text-xs">Signed in as</p>
@@ -229,6 +231,17 @@ function TopBar({ onLogout }: { onLogout: () => void }) {
             </svg>
             Manage trips
           </a>
+          {notifStatus !== 'denied' && (
+            <button onClick={() => { if (notifStatus === 'default') enableNotifs(); setMenuOpen(false) }}
+              className="w-full flex items-center gap-3 px-4 py-3 text-white/80 hover:text-white hover:bg-white/10 transition-colors text-sm text-left border-t border-white/10">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                <path d="M13.73 21a2 2 0 01-3.46 0"/>
+                {notifStatus === 'granted' && <line x1="1" y1="1" x2="23" y2="23" stroke="none"/>}
+              </svg>
+              {notifStatus === 'granted' ? 'Notifications on ✓' : 'Enable notifications'}
+            </button>
+          )}
           <button onClick={() => { setMenuOpen(false); onLogout() }}
             className="w-full flex items-center gap-3 px-4 py-3 text-white/80 hover:text-white hover:bg-white/10 transition-colors text-sm text-left border-t border-white/10">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

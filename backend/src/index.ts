@@ -2,6 +2,17 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { serveStatic } from 'hono/bun'
 import { db } from './db'
+import webpush from 'web-push'
+
+// ── VAPID setup (auto-generate keys on first run) ─────────────────────────────
+type VapidRow = { public_key: string; private_key: string }
+let vapidKeys = db.query('SELECT public_key, private_key FROM vapid_keys LIMIT 1').get() as VapidRow | null
+if (!vapidKeys) {
+  const keys = webpush.generateVAPIDKeys()
+  db.run('INSERT INTO vapid_keys (public_key, private_key) VALUES (?, ?)', [keys.publicKey, keys.privateKey])
+  vapidKeys = { public_key: keys.publicKey, private_key: keys.privateKey }
+}
+webpush.setVapidDetails('mailto:noreply@nextstop.app', vapidKeys.public_key, vapidKeys.private_key)
 
 const app = new Hono<{ Variables: { userId: number } }>()
 app.use('/api/*', cors())
@@ -158,6 +169,74 @@ app.post('/api/join/:token', requireAuth, async (c) => {
   }
   return c.json({ success: true, count })
 })
+
+// ── Push notifications ─────────────────────────────────────────────────────────
+app.get('/api/push/key', requireAuth, (c) => {
+  return c.json({ publicKey: vapidKeys!.public_key })
+})
+
+app.post('/api/push/subscribe', requireAuth, async (c) => {
+  const { endpoint, keys } = await c.req.json()
+  const userId = c.get('userId')
+  db.run(
+    'INSERT INTO push_subscriptions (user_id, endpoint, keys) VALUES (?, ?, ?) ON CONFLICT(user_id, endpoint) DO UPDATE SET keys=excluded.keys',
+    [userId, endpoint, JSON.stringify(keys)]
+  )
+  return c.json({ success: true })
+})
+
+const MILESTONES: Record<number, { title: string; body: string }> = {
+  30: { title: '✈️ {name}',  body: '30 days to go... the countdown is on!' },
+  14: { title: '✈️ {name}',  body: '2 weeks to go! Time to start thinking about packing.' },
+  7:  { title: '🎉 {name}',  body: 'This week! Only 7 days to go.' },
+  1:  { title: '⏰ {name}',  body: "Tomorrow! You're nearly there." },
+  0:  { title: '🌴 {name}',  body: "Today's the day! Have an amazing trip!" },
+}
+
+async function checkMilestones() {
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+
+  type Row = { id: number; user_id: number; name: string; departure_date: string; endpoint: string; sub_keys: string }
+  const rows = db.query(`
+    SELECT e.id, e.user_id, e.name, e.departure_date, ps.endpoint, ps.keys AS sub_keys
+    FROM events e
+    JOIN push_subscriptions ps ON ps.user_id = e.user_id
+    WHERE date(e.departure_date) >= date('now')
+  `).all() as Row[]
+
+  for (const row of rows) {
+    const dep = new Date(row.departure_date); dep.setHours(0, 0, 0, 0)
+    const daysLeft = Math.round((dep.getTime() - today.getTime()) / 86400000)
+    const tpl = MILESTONES[daysLeft]
+    if (!tpl) continue
+
+    const already = db.query(
+      'SELECT 1 FROM notifications_sent WHERE endpoint=? AND event_id=? AND milestone_days=?'
+    ).get(row.endpoint, row.id, daysLeft)
+    if (already) continue
+
+    try {
+      await webpush.sendNotification(
+        { endpoint: row.endpoint, keys: JSON.parse(row.sub_keys) },
+        JSON.stringify({
+          title: tpl.title.replace('{name}', row.name),
+          body:  tpl.body,
+          tag:   `${row.id}-${daysLeft}`,
+        })
+      )
+      db.run('INSERT OR IGNORE INTO notifications_sent (endpoint, event_id, milestone_days) VALUES (?, ?, ?)',
+        [row.endpoint, row.id, daysLeft])
+    } catch (err: any) {
+      if (err.statusCode === 410 || err.statusCode === 404) {
+        db.run('DELETE FROM push_subscriptions WHERE endpoint = ?', [row.endpoint])
+      }
+    }
+  }
+}
+
+// Run on startup and every 6 hours
+checkMilestones()
+setInterval(checkMilestones, 6 * 60 * 60 * 1000)
 
 // ── Weather ────────────────────────────────────────────────────────────────────
 interface WeatherCache { data: object; timestamp: number }
