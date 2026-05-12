@@ -14,13 +14,15 @@ function Protected({ children }: { children: React.ReactNode }) {
 
 function AppRoutes() {
   const { user, loading } = useAuth()
-  if (loading) return null
   return (
     <Routes>
-      <Route path="/login"       element={user ? <Navigate to="/" replace /> : <Login />} />
+      {/* Public routes — render immediately, no auth gate */}
       <Route path="/join/:token" element={<Join />} />
+      <Route path="/login"       element={loading ? null : user ? <Navigate to="/" replace /> : <Login />} />
+      {/* Protected routes — wait for auth to resolve */}
       <Route path="/"            element={<Protected><Home /></Protected>} />
       <Route path="/admin"       element={<Protected><Admin /></Protected>} />
+      <Route path="*"            element={loading ? null : <Navigate to="/" replace />} />
     </Routes>
   )
 }
