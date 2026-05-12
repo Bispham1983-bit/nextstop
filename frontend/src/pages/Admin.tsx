@@ -227,6 +227,7 @@ export function Admin() {
 
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState<number | null>(null)
+  const [leaving, setLeaving] = useState<number | null>(null)
   const [error, setError] = useState('')
 
   const [selectMode, setSelectMode] = useState(false)
@@ -316,6 +317,16 @@ export function Admin() {
       await loadEvents()
     } catch { /* ignore */ }
     setDeleting(null)
+  }
+
+  const handleLeave = async (id: number) => {
+    if (!confirm('Leave this trip?')) return
+    setLeaving(id)
+    try {
+      await apiFetch(`/api/events/${id}/leave`, { method: 'DELETE' })
+      await loadEvents()
+    } catch { /* ignore */ }
+    setLeaving(null)
   }
 
   const set = (key: keyof typeof EMPTY_FORM) =>
@@ -433,9 +444,21 @@ export function Admin() {
                         </button>
                       </>
                     ) : (
-                      <span className="px-2 py-1 rounded-lg bg-white/5 text-white/30 text-xs self-center whitespace-nowrap">
-                        {event.creator_name}'s trip
-                      </span>
+                      <>
+                        <span className="text-white/25 text-xs self-center whitespace-nowrap hidden sm:inline">
+                          {event.creator_name}'s trip
+                        </span>
+                        <button onClick={() => handleLeave(event.id)} disabled={leaving === event.id}
+                          className="p-2 rounded-lg bg-white/10 hover:bg-red-500/40 transition-colors disabled:opacity-50"
+                          title="Leave trip">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white"
+                            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+                            <polyline points="16 17 21 12 16 7"/>
+                            <line x1="21" y1="12" x2="9" y2="12"/>
+                          </svg>
+                        </button>
+                      </>
                     )}
                   </div>
                 )}

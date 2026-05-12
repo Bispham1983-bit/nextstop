@@ -135,6 +135,16 @@ app.delete('/api/events/:id', requireAuth, async (c) => {
   return c.json({ success: true })
 })
 
+app.delete('/api/events/:id/leave', requireAuth, async (c) => {
+  const userId = c.get('userId')
+  const eventId = c.req.param('id')
+  // Only members (non-creators) can leave
+  const isCreator = db.query('SELECT id FROM events WHERE id = ? AND user_id = ?').get(eventId, userId)
+  if (isCreator) return c.json({ error: 'Creators cannot leave their own trip' }, 403)
+  db.run('DELETE FROM event_members WHERE event_id = ? AND user_id = ?', [eventId, userId])
+  return c.json({ success: true })
+})
+
 // ── Share / Join ───────────────────────────────────────────────────────────────
 app.post('/api/share', requireAuth, async (c) => {
   const { event_ids } = await c.req.json()

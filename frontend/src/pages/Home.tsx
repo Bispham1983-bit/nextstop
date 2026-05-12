@@ -22,9 +22,11 @@ interface Event {
   is_creator: number  // 1 or 0
 }
 
-function formatGoing(going: string): string | null {
-  const names = going ? going.split('|').filter(Boolean) : []
-  if (names.length <= 1) return null
+function formatGoing(going: string, myName?: string): string | null {
+  let names = going ? going.split('|').filter(Boolean) : []
+  if (myName) names = names.filter(n => n !== myName)
+  if (names.length === 0) return null
+  if (names.length === 1) return `Going with ${names[0]}`
   if (names.length === 2) return `Going with ${names[0]} & ${names[1]}`
   return `Going with ${names.slice(0, -1).join(', ')} & ${names[names.length - 1]}`
 }
@@ -140,7 +142,7 @@ function daysUntil(dateStr: string): { n: number; label: string; departed: boole
   return { n, label: n === 1 ? 'day' : 'days', departed: false }
 }
 
-function TripGrid({ events, weatherMap, onSelect }: { events: Event[]; weatherMap: Record<string, Weather>; onSelect: (i: number) => void }) {
+function TripGrid({ events, weatherMap, onSelect, myName }: { events: Event[]; weatherMap: Record<string, Weather>; onSelect: (i: number) => void; myName: string }) {
   return (
     <div className="fixed inset-0 z-30 overflow-y-auto"
       style={{ background: 'rgba(5,10,30,0.97)', backdropFilter: 'blur(20px)' }}>
@@ -183,6 +185,11 @@ function TripGrid({ events, weatherMap, onSelect }: { events: Event[]; weatherMa
                       <span className="text-base flex-shrink-0 opacity-80">{TRAVEL_ICON[event.travel_mode] ?? '✈'}</span>
                     </div>
                     <p className="text-white/60 text-xs truncate mb-2">{event.location || event.destination}</p>
+
+                    {/* Going with */}
+                    {formatGoing(event.going, myName) && (
+                      <p className="text-white/50 text-xs truncate mb-1">{formatGoing(event.going, myName)}</p>
+                    )}
 
                     {/* Weather */}
                     {weather ? (
@@ -296,7 +303,7 @@ function TopBar({ onLogout }: { onLogout: () => void }) {
   )
 }
 
-function EventSlide({ event, weather }: { event: Event; weather: Weather | null }) {
+function EventSlide({ event, weather, myName }: { event: Event; weather: Weather | null; myName: string }) {
   const [timeLeft, setTimeLeft] = useState<TimeLeft>({ days: 0, hours: 0, minutes: 0, seconds: 0, total: 0 })
 
   useEffect(() => {
@@ -329,12 +336,12 @@ function EventSlide({ event, weather }: { event: Event; weather: Weather | null 
         <p className="text-white/50 text-sm font-medium tracking-wide drop-shadow">
           {event.location}
         </p>
-        {formatGoing(event.going) && (
+        {formatGoing(event.going, myName) && (
           <p className="text-white/40 text-xs font-medium mt-1 mb-5 drop-shadow">
-            {formatGoing(event.going)}
+            {formatGoing(event.going, myName)}
           </p>
         )}
-        {!formatGoing(event.going) && <div className="mb-5" />}
+        {!formatGoing(event.going, myName) && <div className="mb-5" />}
 
         {/* Weather card */}
         {weather && (
@@ -429,7 +436,7 @@ function EventSlide({ event, weather }: { event: Event; weather: Weather | null 
 }
 
 export function Home() {
-  const { logout } = useAuth()
+  const { logout, user } = useAuth()
   const apiFetch = useApiFetch()
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
@@ -526,7 +533,7 @@ export function Home() {
       )}
 
       {/* Grid overlay */}
-      {showGrid && <TripGrid events={events} weatherMap={weatherMap} onSelect={jumpTo} />}
+      {showGrid && <TripGrid events={events} weatherMap={weatherMap} onSelect={jumpTo} myName={user?.name ?? ''} />}
 
       {/* Swipeable carousel */}
       <div ref={scrollRef} onScroll={handleScroll}
@@ -553,6 +560,7 @@ export function Home() {
             key={event.id}
             event={event}
             weather={weatherMap[event.location || event.destination] ?? null}
+            myName={user?.name ?? ''}
           />
         ))}
       </div>
