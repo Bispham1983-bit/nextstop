@@ -80,6 +80,7 @@ interface Event {
   booking_date: string
   going: string
   is_creator: number
+  creator_name: string
 }
 
 const EMPTY_FORM = {
@@ -315,8 +316,8 @@ export function Admin() {
                         </button>
                       </>
                     ) : (
-                      <span className="px-2 py-1 rounded-lg bg-white/5 text-white/30 text-xs self-center">
-                        Shared
+                      <span className="px-2 py-1 rounded-lg bg-white/5 text-white/30 text-xs self-center whitespace-nowrap">
+                        {event.creator_name}'s trip
                       </span>
                     )}
                   </div>

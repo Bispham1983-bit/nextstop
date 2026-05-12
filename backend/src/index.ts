@@ -94,6 +94,7 @@ app.get('/api/events', requireAuth, (c) => {
   const events = db.query(`
     SELECT DISTINCT e.*,
       CASE WHEN e.user_id = ? THEN 1 ELSE 0 END as is_creator,
+      uc.name as creator_name,
       COALESCE((
         SELECT GROUP_CONCAT(n, '|') FROM (
           SELECT u1.name as n FROM users u1 WHERE u1.id = e.user_id
@@ -104,6 +105,7 @@ app.get('/api/events', requireAuth, (c) => {
         )
       ), '') as going
     FROM events e
+    JOIN users uc ON uc.id = e.user_id
     WHERE e.user_id = ? OR e.id IN (SELECT event_id FROM event_members WHERE user_id = ?)
     ORDER BY e.departure_date ASC
   `).all(userId, userId, userId)
