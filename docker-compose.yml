@@ -8,5 +8,15 @@ services:
       - nextstop_data:/data
     restart: unless-stopped
 
+  nextstop-mexico:
+    build: .
+    container_name: nextstop-mexico
+    ports:
+      - "3002:3001"
+    volumes:
+      - nextstop_mexico_data:/data
+    restart: unless-stopped
+
 volumes:
   nextstop_data:
+  nextstop_mexico_data:
