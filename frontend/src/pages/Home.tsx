@@ -129,39 +129,56 @@ function TripGrid({ events, onSelect }: { events: Event[]; onSelect: (i: number)
   return (
     <div className="fixed inset-0 z-30 overflow-y-auto"
       style={{ background: 'rgba(5,10,30,0.97)', backdropFilter: 'blur(20px)' }}>
-      <div className="px-4 pt-14 pb-8">
+      <div className="px-4 pt-14 pb-8 max-w-lg mx-auto">
         <p className="text-white/50 text-xs font-semibold tracking-[0.3em] uppercase text-center mb-6">
           All Trips
         </p>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-col gap-3">
           {events.map((event, i) => {
             const { n, label, departed } = daysUntil(event.departure_date)
+            const progress = calculateProgress(event.booking_date, event.departure_date)
             const grad = SCENE_GRAD[event.scene_type] ?? SCENE_GRAD.beach
             return (
               <button key={event.id} onClick={() => onSelect(i)}
-                className="relative rounded-2xl overflow-hidden text-left"
-                style={{ background: grad, minHeight: 160,
-                  boxShadow: '0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1)' }}>
-                {/* Travel icon */}
-                <span className="absolute top-3 right-3 text-sm opacity-70">
-                  {TRAVEL_ICON[event.travel_mode] ?? '✈'}
-                </span>
-                {/* Days countdown */}
-                <div className="absolute top-3 left-4">
-                  {departed ? (
-                    <span className="text-xs font-bold text-white/50 uppercase tracking-wider">Departed</span>
-                  ) : (
-                    <>
-                      <span className="text-4xl font-black text-white leading-none drop-shadow">{n}</span>
-                      <span className="text-white/70 text-xs font-semibold ml-1">{label}</span>
-                    </>
-                  )}
-                </div>
-                {/* Trip name + location */}
-                <div className="absolute bottom-0 left-0 right-0 px-4 py-3"
-                  style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.55), transparent)' }}>
-                  <p className="text-white font-black text-base leading-tight truncate">{event.name}</p>
-                  <p className="text-white/60 text-xs truncate mt-0.5">{event.location || event.destination}</p>
+                className="relative rounded-2xl overflow-hidden text-left w-full"
+                style={{ background: grad, boxShadow: '0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1)' }}>
+
+                <div className="flex items-center gap-4 px-5 py-4">
+
+                  {/* Countdown */}
+                  <div className="flex-shrink-0 w-16 text-center">
+                    {departed ? (
+                      <span className="text-xs font-bold text-white/50 uppercase tracking-wider leading-tight">Gone! 🌴</span>
+                    ) : (
+                      <>
+                        <div className="text-5xl font-black text-white leading-none tabular-nums drop-shadow">{n}</div>
+                        <div className="text-white/60 text-xs font-semibold mt-0.5">{label}</div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Divider */}
+                  <div className="w-px self-stretch bg-white/20 flex-shrink-0" />
+
+                  {/* Details */}
+                  <div className="flex-1 min-w-0 py-0.5">
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <p className="text-white font-black text-lg leading-tight truncate">{event.name}</p>
+                      <span className="text-base flex-shrink-0 opacity-80">{TRAVEL_ICON[event.travel_mode] ?? '✈'}</span>
+                    </div>
+                    <p className="text-white/60 text-xs truncate mb-2">{event.location || event.destination}</p>
+                    <p className="text-white/40 text-xs mb-2">
+                      Departs {formatDate(event.departure_date)}
+                    </p>
+                    {/* Progress bar */}
+                    {!departed && (
+                      <div className="h-1 rounded-full bg-white/15 overflow-hidden">
+                        <div className="h-full rounded-full bg-white/60 transition-all"
+                          style={{ width: `${Math.round(progress * 100)}%` }} />
+                      </div>
+                    )}
+                  </div>
+
                 </div>
               </button>
             )
