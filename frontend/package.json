@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "bunx vite",
-    "build": "bunx tsc && bunx vite build",
+    "build": "bunx pwa-assets-generator && bunx tsc && bunx vite build",
     "preview": "bunx vite preview"
   },
   "dependencies": {
@@ -15,6 +15,7 @@
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.1",
+    "@vite-pwa/assets-generator": "^0.2.6",
     "autoprefixer": "^10.4.19",
     "postcss": "^8.4.40",
     "tailwindcss": "^3.4.9",
