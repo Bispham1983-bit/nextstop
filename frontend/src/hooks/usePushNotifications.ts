@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useApiFetch } from '../context/AuthContext'
 
-function urlBase64ToUint8Array(base64: string): Uint8Array {
+function urlBase64ToUint8Array(base64: string): ArrayBuffer {
   const padding = '='.repeat((4 - (base64.length % 4)) % 4)
   const b64 = (base64 + padding).replace(/-/g, '+').replace(/_/g, '/')
   const raw = atob(b64)
-  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)))
+  const buf = new ArrayBuffer(raw.length)
+  const view = new Uint8Array(buf)
+  for (let i = 0; i < raw.length; i++) view[i] = raw.charCodeAt(i)
+  return buf
 }
 
 async function registerSubscription(apiFetch: ReturnType<typeof useApiFetch>) {
