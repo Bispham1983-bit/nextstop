@@ -58,6 +58,34 @@ db.run(`
 `)
 
 db.run(`
+  CREATE TABLE IF NOT EXISTS friendships (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    requester_id INTEGER NOT NULL,
+    addressee_id INTEGER NOT NULL,
+    status       TEXT    NOT NULL DEFAULT 'pending',
+    created_at   INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+    UNIQUE(requester_id, addressee_id),
+    FOREIGN KEY (requester_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (addressee_id) REFERENCES users(id) ON DELETE CASCADE
+  )
+`)
+
+db.run(`
+  CREATE TABLE IF NOT EXISTS trip_invites (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_id     INTEGER NOT NULL,
+    from_user_id INTEGER NOT NULL,
+    to_user_id   INTEGER NOT NULL,
+    status       TEXT    NOT NULL DEFAULT 'pending',
+    created_at   INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+    UNIQUE(event_id, to_user_id),
+    FOREIGN KEY (event_id)     REFERENCES events(id) ON DELETE CASCADE,
+    FOREIGN KEY (from_user_id) REFERENCES users(id)  ON DELETE CASCADE,
+    FOREIGN KEY (to_user_id)   REFERENCES users(id)  ON DELETE CASCADE
+  )
+`)
+
+db.run(`
   CREATE TABLE IF NOT EXISTS vapid_keys (
     id          INTEGER PRIMARY KEY,
     public_key  TEXT    NOT NULL,

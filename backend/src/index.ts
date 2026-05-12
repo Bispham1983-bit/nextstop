@@ -190,6 +190,151 @@ app.post('/api/join/:token', requireAuth, async (c) => {
   return c.json({ success: true, count })
 })
 
+// ── Push helper ───────────────────────────────────────────────────────────────
+async function sendPushToUser(userId: number, payload: { title: string; body: string; tag?: string }) {
+  const subs = db.query('SELECT endpoint, keys FROM push_subscriptions WHERE user_id = ?')
+    .all(userId) as { endpoint: string; keys: string }[]
+  for (const sub of subs) {
+    try {
+      await webpush.sendNotification({ endpoint: sub.endpoint, keys: JSON.parse(sub.keys) }, JSON.stringify(payload))
+    } catch (err: any) {
+      if (err.statusCode === 410 || err.statusCode === 404)
+        db.run('DELETE FROM push_subscriptions WHERE endpoint = ?', [sub.endpoint])
+    }
+  }
+}
+
+// ── Friends ────────────────────────────────────────────────────────────────────
+app.get('/api/users/search', requireAuth, (c) => {
+  const q = (c.req.query('q') ?? '').trim()
+  if (q.length < 2) return c.json([])
+  const userId = c.get('userId')
+  const users = db.query(
+    'SELECT id, name, email FROM users WHERE (name LIKE ? OR email LIKE ?) AND id != ? LIMIT 10'
+  ).all(`%${q}%`, `%${q}%`, userId)
+  return c.json(users)
+})
+
+app.get('/api/friends', requireAuth, (c) => {
+  const userId = c.get('userId')
+  const friends = db.query(`
+    SELECT u.id, u.name, u.email, f.id as friendship_id
+    FROM friendships f
+    JOIN users u ON u.id = CASE WHEN f.requester_id = ? THEN f.addressee_id ELSE f.requester_id END
+    WHERE (f.requester_id = ? OR f.addressee_id = ?) AND f.status = 'accepted'
+  `).all(userId, userId, userId)
+  const sent = db.query(`
+    SELECT f.id, u.name, u.email FROM friendships f
+    JOIN users u ON u.id = f.addressee_id
+    WHERE f.requester_id = ? AND f.status = 'pending'
+  `).all(userId)
+  const received = db.query(`
+    SELECT f.id, u.name, u.email FROM friendships f
+    JOIN users u ON u.id = f.requester_id
+    WHERE f.addressee_id = ? AND f.status = 'pending'
+  `).all(userId)
+  return c.json({ friends, sent, received })
+})
+
+app.post('/api/friends/request', requireAuth, async (c) => {
+  const { to_user_id } = await c.req.json()
+  const userId = c.get('userId')
+  const existing = db.query(
+    'SELECT id FROM friendships WHERE (requester_id=? AND addressee_id=?) OR (requester_id=? AND addressee_id=?)'
+  ).get(userId, to_user_id, to_user_id, userId)
+  if (existing) return c.json({ error: 'Already connected' }, 409)
+  const result = db.run('INSERT INTO friendships (requester_id, addressee_id) VALUES (?, ?)', [userId, to_user_id]) as { lastInsertRowid: number }
+  const sender = db.query('SELECT name FROM users WHERE id = ?').get(userId) as { name: string }
+  sendPushToUser(to_user_id, { title: '👋 Friend request', body: `${sender.name} wants to be friends on Next Stop`, tag: `fr-${result.lastInsertRowid}` })
+  return c.json({ success: true, id: result.lastInsertRowid })
+})
+
+app.put('/api/friends/:id/accept', requireAuth, (c) => {
+  db.run("UPDATE friendships SET status='accepted' WHERE id=? AND addressee_id=?", [c.req.param('id'), c.get('userId')])
+  return c.json({ success: true })
+})
+
+app.put('/api/friends/:id/decline', requireAuth, (c) => {
+  db.run("UPDATE friendships SET status='declined' WHERE id=? AND addressee_id=?", [c.req.param('id'), c.get('userId')])
+  return c.json({ success: true })
+})
+
+// ── Notifications ──────────────────────────────────────────────────────────────
+app.get('/api/notifications', requireAuth, (c) => {
+  const userId = c.get('userId')
+  const friendRequests = db.query(`
+    SELECT f.id, u.name, u.email, 'friend_request' as type
+    FROM friendships f JOIN users u ON u.id = f.requester_id
+    WHERE f.addressee_id = ? AND f.status = 'pending'
+  `).all(userId)
+  const tripInvites = db.query(`
+    SELECT ti.id, ti.event_id, e.name as trip_name, u.name as from_name, 'trip_invite' as type
+    FROM trip_invites ti
+    JOIN events e ON e.id = ti.event_id
+    JOIN users u ON u.id = ti.from_user_id
+    WHERE ti.to_user_id = ? AND ti.status = 'pending'
+  `).all(userId)
+  const items = [...friendRequests, ...tripInvites]
+  return c.json({ items, count: items.length })
+})
+
+// ── Trip invites ───────────────────────────────────────────────────────────────
+app.get('/api/trips/:id/friends-status', requireAuth, (c) => {
+  const userId = c.get('userId')
+  const eventId = Number(c.req.param('id'))
+  const friends = db.query(`
+    SELECT u.id, u.name FROM friendships f
+    JOIN users u ON u.id = CASE WHEN f.requester_id=? THEN f.addressee_id ELSE f.requester_id END
+    WHERE (f.requester_id=? OR f.addressee_id=?) AND f.status='accepted'
+  `).all(userId, userId, userId) as { id: number; name: string }[]
+
+  const memberIds = new Set([
+    ...(db.query('SELECT user_id FROM event_members WHERE event_id=?').all(eventId) as { user_id: number }[]).map(r => r.user_id),
+    (db.query('SELECT user_id FROM events WHERE id=?').get(eventId) as { user_id: number } | null)?.user_id,
+  ].filter(Boolean) as number[])
+
+  const invitedIds = new Set(
+    (db.query("SELECT to_user_id FROM trip_invites WHERE event_id=? AND status='pending'").all(eventId) as { to_user_id: number }[])
+      .map(r => r.to_user_id)
+  )
+
+  return c.json(friends.map(f => ({
+    id: f.id, name: f.name,
+    status: memberIds.has(f.id) ? 'member' : invitedIds.has(f.id) ? 'invited' : 'none',
+  })))
+})
+
+app.post('/api/trips/:id/invite', requireAuth, async (c) => {
+  const { to_user_id } = await c.req.json()
+  const userId = c.get('userId')
+  const eventId = Number(c.req.param('id'))
+  const creator = db.query('SELECT id FROM events WHERE id=? AND user_id=?').get(eventId, userId)
+  const member  = db.query('SELECT 1 FROM event_members WHERE event_id=? AND user_id=?').get(eventId, userId)
+  if (!creator && !member) return c.json({ error: 'Not found' }, 404)
+  db.run(`INSERT INTO trip_invites (event_id, from_user_id, to_user_id) VALUES (?,?,?)
+    ON CONFLICT(event_id, to_user_id) DO UPDATE SET status='pending', from_user_id=excluded.from_user_id`,
+    [eventId, userId, to_user_id])
+  const sender = db.query('SELECT name FROM users WHERE id=?').get(userId) as { name: string }
+  const event  = db.query('SELECT name FROM events WHERE id=?').get(eventId) as { name: string }
+  sendPushToUser(to_user_id, { title: '✈️ Trip invite', body: `${sender.name} invited you to join ${event.name}!`, tag: `invite-${eventId}` })
+  return c.json({ success: true })
+})
+
+app.put('/api/invites/:id/accept', requireAuth, async (c) => {
+  const userId = c.get('userId')
+  const invite = db.query("SELECT * FROM trip_invites WHERE id=? AND to_user_id=? AND status='pending'")
+    .get(c.req.param('id'), userId) as { id: number; event_id: number } | null
+  if (!invite) return c.json({ error: 'Not found' }, 404)
+  db.run("UPDATE trip_invites SET status='accepted' WHERE id=?", [invite.id])
+  db.run('INSERT OR IGNORE INTO event_members (event_id, user_id) VALUES (?,?)', [invite.event_id, userId])
+  return c.json({ success: true })
+})
+
+app.put('/api/invites/:id/decline', requireAuth, (c) => {
+  db.run("UPDATE trip_invites SET status='declined' WHERE id=? AND to_user_id=?", [c.req.param('id'), c.get('userId')])
+  return c.json({ success: true })
+})
+
 // ── Push notifications ─────────────────────────────────────────────────────────
 app.get('/api/push/key', requireAuth, (c) => {
   return c.json({ publicKey: vapidKeys!.public_key })

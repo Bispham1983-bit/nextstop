@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth, useApiFetch } from '../context/AuthContext'
 
 function ShareModal({ url, names, onClose }: { url: string; names: string[]; onClose: () => void }) {
@@ -60,6 +60,110 @@ function ShareModal({ url, names, onClose }: { url: string; names: string[]; onC
             className="text-white/50 hover:text-blue-400 text-xs font-semibold flex-shrink-0 transition-colors">
             {copiedLink ? '✓' : 'Link only'}
           </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+interface FriendStatus {
+  id: number
+  name: string
+  email: string
+  status: 'member' | 'invited' | 'none'
+  invite_id?: number
+}
+
+function InviteModal({ eventId, eventName, onClose }: {
+  eventId: number
+  eventName: string
+  onClose: () => void
+}) {
+  const apiFetch = useApiFetch()
+  const [friends, setFriends] = useState<FriendStatus[]>([])
+  const [loading, setLoading] = useState(true)
+  const [acting, setActing] = useState<number | null>(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await apiFetch(`/api/trips/${eventId}/friends-status`)
+      if (res.ok) setFriends(await res.json())
+    } catch {}
+    setLoading(false)
+  }, [apiFetch, eventId])
+
+  useEffect(() => { load() }, [load])
+
+  const invite = async (userId: number) => {
+    setActing(userId)
+    try {
+      await apiFetch(`/api/trips/${eventId}/invite`, {
+        method: 'POST',
+        body: JSON.stringify({ user_id: userId }),
+      })
+      await load()
+    } catch {}
+    setActing(null)
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-4"
+      style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}
+      onClick={onClose}>
+      <div className="w-full max-w-sm rounded-2xl p-6 border border-white/20 space-y-4 max-h-[70vh] flex flex-col"
+        style={{ background: 'linear-gradient(to bottom, #0d2a5e, #0a0f2e)' }}
+        onClick={e => e.stopPropagation()}>
+
+        <div className="flex justify-between items-center flex-shrink-0">
+          <div>
+            <h3 className="text-white font-bold">Invite to {eventName}</h3>
+            <p className="text-white/40 text-xs mt-0.5">Choose friends to invite</p>
+          </div>
+          <button onClick={onClose} className="text-white/40 hover:text-white text-lg leading-none transition-colors">✕</button>
+        </div>
+
+        <div className="overflow-y-auto flex-1 space-y-2 -mx-1 px-1">
+          {loading && (
+            <p className="text-white/30 text-sm text-center py-8 animate-pulse">Loading…</p>
+          )}
+          {!loading && friends.length === 0 && (
+            <div className="text-center py-8 text-white/30">
+              <p className="text-3xl mb-2">👥</p>
+              <p className="text-sm">No friends yet</p>
+              <p className="text-xs mt-1 text-white/20">Add friends from the bell icon on the home screen</p>
+            </div>
+          )}
+          {friends.map(f => {
+            const busy = acting === f.id
+            return (
+              <div key={f.id}
+                className="flex items-center gap-3 bg-white/10 rounded-xl p-3 border border-white/15">
+                <div className="w-9 h-9 rounded-full bg-blue-600/30 flex items-center justify-center flex-shrink-0">
+                  <span className="text-blue-300 font-bold text-xs">{f.name.charAt(0).toUpperCase()}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white text-sm font-semibold truncate">{f.name}</p>
+                  <p className="text-white/40 text-xs truncate">{f.email}</p>
+                </div>
+                {f.status === 'member' && (
+                  <span className="text-green-400 text-xs font-semibold flex-shrink-0">Going ✓</span>
+                )}
+                {f.status === 'invited' && (
+                  <span className="text-yellow-400/70 text-xs flex-shrink-0">Invited</span>
+                )}
+                {f.status === 'none' && (
+                  <button onClick={() => invite(f.id)} disabled={busy}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex-shrink-0 ${
+                      busy ? 'opacity-40 pointer-events-none bg-blue-600 text-white' :
+                             'bg-blue-600 hover:bg-blue-500 text-white'
+                    }`}>
+                    {busy ? '…' : 'Invite'}
+                  </button>
+                )}
+              </div>
+            )
+          })}
         </div>
       </div>
     </div>
@@ -129,6 +233,7 @@ export function Admin() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
   const [shareModal, setShareModal] = useState<{ url: string; names: string[] } | null>(null)
   const [sharing, setSharing] = useState(false)
+  const [inviteModal, setInviteModal] = useState<{ id: number; name: string } | null>(null)
 
   const toggleSelect = (id: number) =>
     setSelectedIds(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s })
@@ -286,6 +391,18 @@ export function Admin() {
                 {/* Action buttons — hidden in select mode */}
                 {!selectMode && (
                   <div className="flex gap-2 flex-shrink-0">
+                    {/* Invite friends */}
+                    <button onClick={() => setInviteModal({ id: event.id, name: event.name })}
+                      className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                      title="Invite friends">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white"
+                        strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <line x1="19" y1="8" x2="19" y2="14"/>
+                        <line x1="22" y1="11" x2="16" y2="11"/>
+                      </svg>
+                    </button>
                     {/* Share — available to all members */}
                     <button onClick={() => handleShare([event.id])} disabled={sharing}
                       className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors disabled:opacity-50">
@@ -349,6 +466,11 @@ export function Admin() {
         {/* Share modal */}
         {shareModal && (
           <ShareModal url={shareModal.url} names={shareModal.names} onClose={() => setShareModal(null)} />
+        )}
+
+        {/* Invite modal */}
+        {inviteModal && (
+          <InviteModal eventId={inviteModal.id} eventName={inviteModal.name} onClose={() => setInviteModal(null)} />
         )}
 
         {/* Add / Edit form */}

@@ -3,6 +3,8 @@ import { FlightPath } from '../components/FlightPath'
 import { SceneBackground } from '../components/SceneBackground'
 import { useAuth, useApiFetch } from '../context/AuthContext'
 import { usePushNotifications } from '../hooks/usePushNotifications'
+import { useNotificationCount } from '../hooks/useNotificationCount'
+import { NotificationsPanel } from './Notifications'
 
 type SceneType = 'beach' | 'countryside' | 'mountains' | 'city' | 'camping' | 'festival' | 'gig'
 type TravelMode = 'plane' | 'car' | 'boat'
@@ -213,9 +215,31 @@ function TripGrid({ events, weatherMap, onSelect }: { events: Event[]; weatherMa
 function TopBar({ onLogout }: { onLogout: () => void }) {
   const { user } = useAuth()
   const { status: notifStatus, enable: enableNotifs } = usePushNotifications()
+  const { count, refresh: refreshCount } = useNotificationCount()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [showNotifs, setShowNotifs] = useState(false)
+
   return (
     <>
+      {/* Bell icon */}
+      <button onClick={() => { setShowNotifs(true); setMenuOpen(false) }}
+        className="absolute top-4 right-14 z-20 p-2 rounded-full"
+        style={{ background: 'rgba(0,0,0,0.25)', backdropFilter: 'blur(8px)' }}>
+        <div className="relative">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)"
+            strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 01-3.46 0"/>
+          </svg>
+          {count > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 bg-blue-500 text-white text-[9px] font-black rounded-full w-4 h-4 flex items-center justify-center leading-none">
+              {count > 9 ? '9+' : count}
+            </span>
+          )}
+        </div>
+      </button>
+
+      {/* Gear icon */}
       <button onClick={() => setMenuOpen(o => !o)}
         className="absolute top-4 right-4 z-20 p-2 rounded-full"
         style={{ background: 'rgba(0,0,0,0.25)', backdropFilter: 'blur(8px)' }}>
@@ -225,6 +249,7 @@ function TopBar({ onLogout }: { onLogout: () => void }) {
           <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
         </svg>
       </button>
+
       {menuOpen && (
         <div className="absolute top-14 right-4 z-30 rounded-2xl overflow-hidden border border-white/20 min-w-[170px]"
           style={{ background: 'rgba(10,15,46,0.95)', backdropFilter: 'blur(20px)' }}>
@@ -246,7 +271,6 @@ function TopBar({ onLogout }: { onLogout: () => void }) {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
                 <path d="M13.73 21a2 2 0 01-3.46 0"/>
-                {notifStatus === 'granted' && <line x1="1" y1="1" x2="23" y2="23" stroke="none"/>}
               </svg>
               {notifStatus === 'granted' ? 'Notifications on ✓' : 'Enable notifications'}
             </button>
@@ -259,6 +283,14 @@ function TopBar({ onLogout }: { onLogout: () => void }) {
             Sign out
           </button>
         </div>
+      )}
+
+      {/* Notifications panel */}
+      {showNotifs && (
+        <NotificationsPanel
+          onClose={() => setShowNotifs(false)}
+          onCountChange={refreshCount}
+        />
       )}
     </>
   )
