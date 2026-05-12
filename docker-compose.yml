@@ -7,6 +7,8 @@ services:
     volumes:
       - nextstop_data:/data
     restart: unless-stopped
+    environment:
+      - HA_WEBHOOK_URL=http://YOUR_HA_IP:8123/api/webhook/nextstop_signup
 
   nextstop-mexico:
     build: .

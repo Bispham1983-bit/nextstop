@@ -33,7 +33,18 @@ app.post('/api/auth/register', async (c) => {
   const token = crypto.randomUUID()
   db.run('INSERT INTO sessions (token, user_id) VALUES (?, ?)', [token, result.lastInsertRowid])
 
-  const user = db.query('SELECT id, email, name FROM users WHERE id = ?').get(result.lastInsertRowid)
+  const user = db.query('SELECT id, email, name FROM users WHERE id = ?').get(result.lastInsertRowid) as { id: number; email: string; name: string }
+
+  // Notify Home Assistant
+  const webhookUrl = process.env.HA_WEBHOOK_URL
+  if (webhookUrl) {
+    fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: user.name, email: user.email }),
+    }).catch(() => {})
+  }
+
   return c.json({ token, user })
 })
 
