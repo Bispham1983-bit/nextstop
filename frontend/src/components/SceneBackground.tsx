@@ -5,7 +5,7 @@ type SceneType = 'beach' | 'countryside' | 'mountains' | 'city' | 'camping' | 'f
 // Map new types to their base scene renderer
 function baseScene(t: SceneType): 'beach' | 'countryside' | 'mountains' | 'city' {
   if (t === 'camping') return 'countryside'
-  if (t === 'festival') return 'beach'
+  if (t === 'festival') return 'countryside'
   if (t === 'gig') return 'city'
   return t
 }
