@@ -125,7 +125,7 @@ function daysUntil(dateStr: string): { n: number; label: string; departed: boole
   return { n, label: n === 1 ? 'day' : 'days', departed: false }
 }
 
-function TripGrid({ events, onSelect }: { events: Event[]; onSelect: (i: number) => void }) {
+function TripGrid({ events, weatherMap, onSelect }: { events: Event[]; weatherMap: Record<string, Weather>; onSelect: (i: number) => void }) {
   return (
     <div className="fixed inset-0 z-30 overflow-y-auto"
       style={{ background: 'rgba(5,10,30,0.97)', backdropFilter: 'blur(20px)' }}>
@@ -138,6 +138,7 @@ function TripGrid({ events, onSelect }: { events: Event[]; onSelect: (i: number)
             const { n, label, departed } = daysUntil(event.departure_date)
             const progress = calculateProgress(event.booking_date, event.departure_date)
             const grad = SCENE_GRAD[event.scene_type] ?? SCENE_GRAD.beach
+            const weather = weatherMap[event.location || event.destination] ?? null
             return (
               <button key={event.id} onClick={() => onSelect(i)}
                 className="relative rounded-2xl overflow-hidden text-left w-full"
@@ -167,9 +168,16 @@ function TripGrid({ events, onSelect }: { events: Event[]; onSelect: (i: number)
                       <span className="text-base flex-shrink-0 opacity-80">{TRAVEL_ICON[event.travel_mode] ?? '✈'}</span>
                     </div>
                     <p className="text-white/60 text-xs truncate mb-2">{event.location || event.destination}</p>
-                    <p className="text-white/40 text-xs mb-2">
-                      Departs {formatDate(event.departure_date)}
-                    </p>
+
+                    {/* Weather */}
+                    {weather ? (
+                      <p className="text-white/70 text-xs mb-2">
+                        {weatherEmoji(weather.weather_code)} {weather.temperature}°C · {weatherDesc(weather.weather_code)}
+                      </p>
+                    ) : (
+                      <p className="text-white/30 text-xs mb-2">Departs {formatDate(event.departure_date)}</p>
+                    )}
+
                     {/* Progress bar */}
                     {!departed && (
                       <div className="h-1 rounded-full bg-white/15 overflow-hidden">
@@ -455,7 +463,7 @@ export function Home() {
       )}
 
       {/* Grid overlay */}
-      {showGrid && <TripGrid events={events} onSelect={jumpTo} />}
+      {showGrid && <TripGrid events={events} weatherMap={weatherMap} onSelect={jumpTo} />}
 
       {/* Swipeable carousel */}
       <div ref={scrollRef} onScroll={handleScroll}
