@@ -31,6 +31,7 @@ export function Join() {
   const navigate = useNavigate()
 
   const [trips, setTrips] = useState<TripPreview[]>([])
+  const [sharer, setSharer] = useState('')
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [joining, setJoining] = useState(false)
@@ -40,8 +41,8 @@ export function Join() {
     fetch(`/api/join/${token}`)
       .then(r => r.ok ? r.json() : null)
       .then(data => {
-        if (!data || !Array.isArray(data) || data.length === 0) setNotFound(true)
-        else setTrips(data)
+        if (!data || !data.events?.length) setNotFound(true)
+        else { setTrips(data.events); setSharer(data.sharer ?? '') }
         setLoading(false)
       })
       .catch(() => { setNotFound(true); setLoading(false) })
@@ -85,7 +86,9 @@ export function Join() {
         {!loading && !notFound && trips.length > 0 && (
           <>
             <div className="text-center mb-6">
-              <p className="text-white/60 text-sm mb-1">You've been invited to join</p>
+              <p className="text-white/60 text-sm mb-1">
+                {sharer ? <><span className="text-white font-semibold">{sharer}</span> has invited you to join</> : 'You've been invited to join'}
+              </p>
               <h1 className="text-white text-3xl font-black">
                 {trips.length === 1 ? trips[0].name : `${trips.length} trips`}
               </h1>

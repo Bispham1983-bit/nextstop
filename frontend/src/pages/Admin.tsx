@@ -1,13 +1,24 @@
 import { useState, useEffect } from 'react'
 import { useAuth, useApiFetch } from '../context/AuthContext'
 
-function ShareModal({ url, count, onClose }: { url: string; count: number; onClose: () => void }) {
-  const [copied, setCopied] = useState(false)
-  const copy = () => {
+function ShareModal({ url, names, onClose }: { url: string; names: string[]; onClose: () => void }) {
+  const [copiedLink, setCopiedLink] = useState(false)
+  const [copiedMsg, setCopiedMsg] = useState(false)
+
+  const tripLabel = names.length === 1 ? names[0] : `${names.length} trips`
+  const message = names.length === 1
+    ? `You've been invited to join my trip to ${names[0]} on Next Stop ✈️\n${url}`
+    : `You've been invited to join ${names.length} trips on Next Stop ✈️\n${url}`
+
+  const copyLink = () => {
     navigator.clipboard.writeText(url)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    setCopiedLink(true); setTimeout(() => setCopiedLink(false), 2000)
   }
+  const copyMsg = () => {
+    navigator.clipboard.writeText(message)
+    setCopiedMsg(true); setTimeout(() => setCopiedMsg(false), 2000)
+  }
+
   const qr = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(url)}`
 
   return (
@@ -20,8 +31,8 @@ function ShareModal({ url, count, onClose }: { url: string; count: number; onClo
 
         <div className="flex justify-between items-center">
           <div>
-            <h3 className="text-white font-bold">Share Trip{count > 1 ? 's' : ''}</h3>
-            {count > 1 && <p className="text-white/40 text-xs mt-0.5">{count} trips in this link</p>}
+            <h3 className="text-white font-bold">Share {tripLabel}</h3>
+            <p className="text-white/40 text-xs mt-0.5">Scan or send the link below</p>
           </div>
           <button onClick={onClose} className="text-white/40 hover:text-white text-lg leading-none transition-colors">✕</button>
         </div>
@@ -33,18 +44,23 @@ function ShareModal({ url, count, onClose }: { url: string; count: number; onClo
           </div>
         </div>
 
-        {/* Copyable link */}
-        <div className="flex items-center gap-3 bg-white/10 rounded-xl px-4 py-3 border border-white/20">
-          <p className="text-white/60 text-xs flex-1 truncate">{url}</p>
-          <button onClick={copy}
-            className="text-blue-400 hover:text-blue-300 text-xs font-semibold flex-shrink-0 transition-colors">
-            {copied ? '✓ Copied!' : 'Copy'}
+        {/* Copyable message */}
+        <div className="bg-white/10 rounded-xl px-4 py-3 border border-white/20 space-y-2">
+          <p className="text-white/50 text-xs whitespace-pre-line leading-relaxed">{message}</p>
+          <button onClick={copyMsg}
+            className="text-blue-400 hover:text-blue-300 text-xs font-semibold transition-colors">
+            {copiedMsg ? '✓ Copied!' : 'Copy message'}
           </button>
         </div>
 
-        <p className="text-white/25 text-xs text-center">
-          Anyone with this link can add {count > 1 ? 'these trips' : 'this trip'} to their account
-        </p>
+        {/* Link only */}
+        <div className="flex items-center gap-3 bg-white/5 rounded-xl px-4 py-2.5 border border-white/10">
+          <p className="text-white/40 text-xs flex-1 truncate">{url}</p>
+          <button onClick={copyLink}
+            className="text-white/50 hover:text-blue-400 text-xs font-semibold flex-shrink-0 transition-colors">
+            {copiedLink ? '✓' : 'Link only'}
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -102,7 +118,7 @@ export function Admin() {
 
   const [selectMode, setSelectMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
-  const [shareModal, setShareModal] = useState<{ url: string; count: number } | null>(null)
+  const [shareModal, setShareModal] = useState<{ url: string; names: string[] } | null>(null)
   const [sharing, setSharing] = useState(false)
 
   const toggleSelect = (id: number) =>
@@ -114,7 +130,8 @@ export function Admin() {
       const res = await apiFetch('/api/share', { method: 'POST', body: JSON.stringify({ event_ids: ids }) })
       const { token } = await res.json()
       const url = `${window.location.origin}/join/${token}`
-      setShareModal({ url, count: ids.length })
+      const names = events.filter(e => ids.includes(e.id)).map(e => e.name)
+      setShareModal({ url, names })
       setSelectMode(false)
       setSelectedIds(new Set())
     } catch {}
@@ -315,7 +332,7 @@ export function Admin() {
 
         {/* Share modal */}
         {shareModal && (
-          <ShareModal url={shareModal.url} count={shareModal.count} onClose={() => setShareModal(null)} />
+          <ShareModal url={shareModal.url} names={shareModal.names} onClose={() => setShareModal(null)} />
         )}
 
         {/* Add / Edit form */}

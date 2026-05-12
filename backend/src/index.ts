@@ -114,17 +114,18 @@ app.post('/api/share', requireAuth, async (c) => {
 })
 
 app.get('/api/join/:token', async (c) => {
-  const link = db.query('SELECT event_ids FROM share_links WHERE token = ?')
-    .get(c.req.param('token')) as { event_ids: string } | null
+  const link = db.query('SELECT event_ids, created_by FROM share_links WHERE token = ?')
+    .get(c.req.param('token')) as { event_ids: string; created_by: number } | null
   if (!link) return c.json({ error: 'Not found' }, 404)
 
+  const sharer = db.query('SELECT name FROM users WHERE id = ?').get(link.created_by) as { name: string } | null
   const ids = JSON.parse(link.event_ids) as number[]
   const events = ids
     .map(id => db.query(
       'SELECT name, destination, location, scene_type, travel_mode, departure_date, booking_date FROM events WHERE id = ?'
     ).get(id))
     .filter(Boolean)
-  return c.json(events)
+  return c.json({ sharer: sharer?.name ?? 'Someone', events })
 })
 
 app.post('/api/join/:token', requireAuth, async (c) => {
