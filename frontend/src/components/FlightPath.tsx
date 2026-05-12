@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 type TravelMode = 'plane' | 'car' | 'boat'
-type SceneType  = 'beach' | 'countryside' | 'mountains' | 'city'
+type SceneType  = 'beach' | 'countryside' | 'mountains' | 'city' | 'camping' | 'festival' | 'gig'
 
 interface FlightPathProps {
   progress: number
@@ -73,12 +73,52 @@ function HillsIcon() {
   )
 }
 
+function TentIcon() {
+  return (
+    <g {...ICON_PROPS} transform="scale(1.9)">
+      <path d="M 0,-10 L -11,8 L 11,8 Z" />
+      <path d="M -3,8 L -3,2 Q 0,0 3,2 L 3,8" />
+      <line x1="-11" y1="8" x2="11" y2="8" />
+    </g>
+  )
+}
+
+function FestivalIcon() {
+  return (
+    <g {...ICON_PROPS} transform="scale(1.9)">
+      {/* Pole */}
+      <line x1="-7" y1="9" x2="-7" y2="-10" />
+      {/* Pennant */}
+      <path d="M -7,-10 L 9,-6 L -7,-2 Z" />
+      {/* Ground line */}
+      <line x1="-11" y1="9" x2="9" y2="9" />
+    </g>
+  )
+}
+
+function MicIcon() {
+  return (
+    <g {...ICON_PROPS} transform="scale(1.9)">
+      {/* Capsule body */}
+      <rect x="-3.5" y="-10" width="7" height="11" rx="3.5" />
+      {/* Boom arm */}
+      <path d="M -6,-2 Q -6,5 0,5 Q 6,5 6,-2" />
+      {/* Stand */}
+      <line x1="0" y1="5" x2="0" y2="9" />
+      <line x1="-4" y1="9" x2="4" y2="9" />
+    </g>
+  )
+}
+
 function destIcon(sceneType: SceneType) {
   switch (sceneType) {
     case 'beach':       return <PalmIcon />
     case 'mountains':   return <MountainIcon />
     case 'city':        return <CityIcon />
     case 'countryside': return <HillsIcon />
+    case 'camping':     return <TentIcon />
+    case 'festival':    return <FestivalIcon />
+    case 'gig':         return <MicIcon />
   }
 }
 

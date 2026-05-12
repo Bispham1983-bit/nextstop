@@ -3,7 +3,7 @@ import { FlightPath } from '../components/FlightPath'
 import { SceneBackground } from '../components/SceneBackground'
 import { useAuth, useApiFetch } from '../context/AuthContext'
 
-type SceneType = 'beach' | 'countryside' | 'mountains' | 'city'
+type SceneType = 'beach' | 'countryside' | 'mountains' | 'city' | 'camping' | 'festival' | 'gig'
 type TravelMode = 'plane' | 'car' | 'boat'
 
 interface Event {
@@ -116,6 +116,9 @@ const SCENE_GRAD: Record<string, string> = {
   countryside: 'linear-gradient(150deg, #0369a1 0%, #2d5a2d 55%, #4d7d4d 100%)',
   mountains:   'linear-gradient(150deg, #0c2a4a 0%, #4a5568 55%, #6b7a90 100%)',
   city:        'linear-gradient(150deg, #060d1e 0%, #1a2540 50%, #2a3852 100%)',
+  camping:     'linear-gradient(150deg, #0a1f0a 0%, #1a3d1a 50%, #2d5a2d 100%)',
+  festival:    'linear-gradient(150deg, #4a0080 0%, #9c27b0 45%, #e65c00 100%)',
+  gig:         'linear-gradient(150deg, #0a000f 0%, #1a0030 50%, #0f0020 100%)',
 }
 
 function daysUntil(dateStr: string): { n: number; label: string; departed: boolean } {

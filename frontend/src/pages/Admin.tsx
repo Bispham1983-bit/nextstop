@@ -66,7 +66,7 @@ function ShareModal({ url, names, onClose }: { url: string; names: string[]; onC
   )
 }
 
-type SceneType = 'beach' | 'countryside' | 'mountains' | 'city'
+type SceneType = 'beach' | 'countryside' | 'mountains' | 'city' | 'camping' | 'festival' | 'gig'
 type TravelMode = 'plane' | 'car' | 'boat'
 
 interface Event {
@@ -90,6 +90,12 @@ const EMPTY_FORM = {
 
 const SCENE_ICONS: Record<SceneType, string> = {
   beach: '🏖️', countryside: '🌄', mountains: '🏔️', city: '🏙️',
+  camping: '🏕️', festival: '🎪', gig: '🎤',
+}
+
+const SCENE_LABELS: Record<SceneType, string> = {
+  beach: 'Beach / Resort', countryside: 'Countryside', mountains: 'Mountains', city: 'City',
+  camping: 'Camping', festival: 'Festival', gig: 'Gig / Concert',
 }
 
 function formatDate(d: string) {
@@ -359,12 +365,12 @@ export function Admin() {
             </div>
 
             <div>
-              <label className={labelClass}>Scene</label>
+              <label className={labelClass}>Type</label>
               <div className="grid grid-cols-2 gap-2">
-                {(['beach','countryside','mountains','city'] as SceneType[]).map(v => (
+                {(['beach','countryside','mountains','city','camping','festival','gig'] as SceneType[]).map(v => (
                   <button key={v} type="button" onClick={() => setForm(f => ({ ...f, scene_type: v }))}
                     className={toggleBtn(form.scene_type === v)}>
-                    {SCENE_ICONS[v]} {v.charAt(0).toUpperCase() + v.slice(1)}
+                    {SCENE_ICONS[v]} {SCENE_LABELS[v]}
                   </button>
                 ))}
               </div>

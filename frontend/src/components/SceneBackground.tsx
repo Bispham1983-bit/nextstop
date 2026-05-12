@@ -1,6 +1,14 @@
 import { useMemo } from 'react'
 
-type SceneType = 'beach' | 'countryside' | 'mountains' | 'city'
+type SceneType = 'beach' | 'countryside' | 'mountains' | 'city' | 'camping' | 'festival' | 'gig'
+
+// Map new types to their base scene renderer
+function baseScene(t: SceneType): 'beach' | 'countryside' | 'mountains' | 'city' {
+  if (t === 'camping') return 'countryside'
+  if (t === 'festival') return 'beach'
+  if (t === 'gig') return 'city'
+  return t
+}
 type Slot = 'night' | 'dawn' | 'morning' | 'midday' | 'afternoon' | 'sunset' | 'dusk' | 'rainy' | 'stormy'
 
 interface Props {
@@ -407,10 +415,10 @@ export function SceneBackground({ hour, weatherCode, sunriseHour, sunsetHour, tr
       )}
 
       {/* Terrain — only one renders at a time based on sceneType */}
-      {sceneType === 'countryside' && <Countryside slot={slot} />}
-      {sceneType === 'mountains'   && <Mountains   slot={slot} />}
-      {sceneType === 'beach'       && <Beach slot={slot} tropical={tropical} sunX={sun.x} />}
-      {sceneType === 'city'        && <City  slot={slot} />}
+      {baseScene(sceneType) === 'countryside' && <Countryside slot={slot} />}
+      {baseScene(sceneType) === 'mountains'   && <Mountains   slot={slot} />}
+      {baseScene(sceneType) === 'beach'       && <Beach slot={slot} tropical={tropical} sunX={sun.x} />}
+      {baseScene(sceneType) === 'city'        && <City  slot={slot} />}
 
     </div>
   )
