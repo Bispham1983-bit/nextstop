@@ -120,44 +120,26 @@ function forecastDayLabel(dateStr: string, i: number): string {
 
 
 function DepartureAnimation({ travelMode }: { travelMode: string }) {
-  const keyframes = `
-    @keyframes ns-takeoff {
-      0%   { transform: translate(0px, 0px) rotate(0deg);    opacity: 0; }
-      8%   { opacity: 1; }
-      65%  { transform: translate(100px, -140px) rotate(-22deg); opacity: 1; }
-      82%  { transform: translate(180px, -240px) rotate(-28deg); opacity: 0; }
-      83%  { transform: translate(0px, 0px) rotate(0deg);    opacity: 0; }
-      100% { transform: translate(0px, 0px) rotate(0deg);    opacity: 0; }
-    }
-    @keyframes ns-drive {
-      0%   { transform: translateX(-90px); opacity: 0; }
-      8%   { opacity: 1; }
-      88%  { opacity: 1; }
-      100% { transform: translateX(calc(100vw + 20px)); opacity: 0; }
-    }
-    @keyframes ns-sail {
-      0%   { transform: translate(-90px,  0px); opacity: 0; }
-      8%   { opacity: 1; }
-      30%  { transform: translate(calc(28vw - 90px), -10px); }
-      55%  { transform: translate(calc(55vw - 90px),   6px); }
-      78%  { transform: translate(calc(78vw - 90px),  -8px); }
-      90%  { opacity: 1; }
-      100% { transform: translate(calc(100vw + 20px), 0px); opacity: 0; }
-    }
-  `
   const emoji = travelMode === 'car' ? '🚗' : travelMode === 'boat' ? '⛵' : '✈️'
-  const anim  = travelMode === 'car'  ? 'ns-drive 3s linear infinite' :
-                travelMode === 'boat' ? 'ns-sail 3.8s ease-in-out infinite' :
-                                        'ns-takeoff 3.2s ease-in infinite'
-  const style: React.CSSProperties = travelMode === 'plane'
-    ? { position: 'absolute', bottom: 8, left: '50%', transform: 'translateX(-50%)', fontSize: 52, lineHeight: 1, animation: anim }
-    : { position: 'absolute', bottom: 8, left: 0,                                    fontSize: 52, lineHeight: 1, animation: anim }
-
   return (
     <>
-      <style>{keyframes}</style>
-      <div style={{ position: 'relative', width: '100%', height: 72, overflow: 'hidden' }}>
-        <div style={style}>{emoji}</div>
+      <style>{`
+        @keyframes ns-zoom-thru {
+          0%   { transform: scale(0.15); opacity: 0; }
+          10%  { opacity: 1; }
+          70%  { transform: scale(4);   opacity: 1; }
+          90%  { transform: scale(10);  opacity: 0; }
+          100% { transform: scale(0.15); opacity: 0; }
+        }
+      `}</style>
+      <div style={{
+        width: '100%', height: 140,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        overflow: 'hidden', position: 'relative',
+      }}>
+        <span style={{ fontSize: 72, lineHeight: 1, display: 'block', animation: 'ns-zoom-thru 2.6s ease-in infinite' }}>
+          {emoji}
+        </span>
       </div>
     </>
   )
@@ -442,10 +424,10 @@ function EventSlide({ event, weather, myName }: { event: Event; weather: Weather
         )}
 
         {isToday ? (
-          <div className="my-10 space-y-4">
+          <div className="my-6 space-y-2">
             <DepartureAnimation travelMode={travelMode} />
-            <p className="text-4xl font-black drop-shadow">Today's the day!</p>
-            <p className="text-white/60 text-sm">Have an amazing trip</p>
+            <p className="text-3xl font-black drop-shadow">Have a great time!</p>
+            <p className="text-white/50 text-sm">{event.destination} awaits ✨</p>
           </div>
         ) : departed ? (
           <div className="my-10 space-y-3">
