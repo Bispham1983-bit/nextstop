@@ -119,27 +119,43 @@ function forecastDayLabel(dateStr: string, i: number): string {
 }
 
 
-function DepartureAnimation({ travelMode }: { travelMode: string }) {
-  const emoji = travelMode === 'car' ? '🚗' : travelMode === 'boat' ? '⛵' : '✈️'
+function DepartureAnimation() {
   return (
     <>
       <style>{`
-        @keyframes ns-zoom-thru {
-          0%   { transform: scale(0.15); opacity: 0; }
-          10%  { opacity: 1; }
-          70%  { transform: scale(4);   opacity: 1; }
-          90%  { transform: scale(10);  opacity: 0; }
-          100% { transform: scale(0.15); opacity: 0; }
+        @keyframes ns-clink {
+          0%   { transform: scale(0) rotate(-15deg); opacity: 0; }
+          28%  { transform: scale(1.3) rotate(6deg);  opacity: 1; }
+          42%  { transform: scale(0.92) rotate(-3deg); }
+          52%  { transform: scale(1.06) rotate(2deg); }
+          62%  { transform: scale(1)   rotate(0deg);  opacity: 1; }
+          82%  { transform: scale(1)   rotate(0deg);  opacity: 1; }
+          100% { transform: scale(0)   rotate(-15deg); opacity: 0; }
+        }
+        @keyframes ns-spark-l {
+          0%,28% { transform: translate(0px, 0px) scale(0); opacity: 0; }
+          52%    { transform: translate(-32px,-24px) scale(1); opacity: 1; }
+          78%    { transform: translate(-52px,-40px) scale(0); opacity: 0; }
+          100%   { transform: translate(0px, 0px) scale(0); opacity: 0; }
+        }
+        @keyframes ns-spark-r {
+          0%,28% { transform: translate(0px, 0px) scale(0); opacity: 0; }
+          52%    { transform: translate(32px,-24px) scale(1); opacity: 1; }
+          78%    { transform: translate(52px,-40px) scale(0); opacity: 0; }
+          100%   { transform: translate(0px, 0px) scale(0); opacity: 0; }
+        }
+        @keyframes ns-spark-t {
+          0%,28% { transform: translate(0px, 0px) scale(0); opacity: 0; }
+          52%    { transform: translate(0px,-40px) scale(1); opacity: 1; }
+          78%    { transform: translate(0px,-64px) scale(0); opacity: 0; }
+          100%   { transform: translate(0px, 0px) scale(0); opacity: 0; }
         }
       `}</style>
-      <div style={{
-        width: '100%', height: 140,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        overflow: 'hidden', position: 'relative',
-      }}>
-        <span style={{ fontSize: 72, lineHeight: 1, display: 'block', animation: 'ns-zoom-thru 2.6s ease-in infinite' }}>
-          {emoji}
-        </span>
+      <div style={{ position: 'relative', width: '100%', height: 110, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <span style={{ fontSize: 64, lineHeight: 1, animation: 'ns-clink 2.6s ease-out infinite' }}>🥂</span>
+        <span style={{ position: 'absolute', fontSize: 22, animation: 'ns-spark-l 2.6s ease-out infinite' }}>✨</span>
+        <span style={{ position: 'absolute', fontSize: 18, animation: 'ns-spark-r 2.6s ease-out infinite' }}>⭐</span>
+        <span style={{ position: 'absolute', fontSize: 16, animation: 'ns-spark-t 2.6s ease-out infinite' }}>✨</span>
       </div>
     </>
   )
@@ -425,7 +441,7 @@ function EventSlide({ event, weather, myName }: { event: Event; weather: Weather
 
         {isToday ? (
           <div className="my-6 space-y-2">
-            <DepartureAnimation travelMode={travelMode} />
+            <DepartureAnimation />
             <p className="text-3xl font-black drop-shadow">Have a great time!</p>
             <p className="text-white/50 text-sm">{event.destination} awaits ✨</p>
           </div>
