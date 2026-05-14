@@ -107,7 +107,9 @@ app.get('/api/events', requireAuth, (c) => {
     FROM events e
     JOIN users uc ON uc.id = e.user_id
     WHERE e.user_id = ? OR e.id IN (SELECT event_id FROM event_members WHERE user_id = ?)
-    ORDER BY e.departure_date ASC
+    ORDER BY
+      CASE WHEN date(e.departure_date) >= date('now', '-7 days') THEN 0 ELSE 1 END,
+      e.departure_date ASC
   `).all(userId, userId, userId)
   return c.json(events)
 })
