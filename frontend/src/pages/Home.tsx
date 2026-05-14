@@ -118,38 +118,6 @@ function forecastDayLabel(dateStr: string, i: number): string {
   return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short' })
 }
 
-const CONFETTI_COLORS = ['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#ff922b','#cc5de8','#f06595']
-
-function Confetti() {
-  const pieces = Array.from({ length: 60 }, (_, i) => i)
-  return (
-    <div className="absolute inset-0 pointer-events-none overflow-hidden z-20">
-      <style>{`
-        @keyframes confetti-fall {
-          0%   { transform: translateY(-10px) rotate(0deg); opacity: 1; }
-          100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
-        }
-      `}</style>
-      {pieces.map(i => {
-        const color = CONFETTI_COLORS[i % CONFETTI_COLORS.length]
-        const left  = `${(i * 37 + 11) % 100}%`
-        const delay = `${((i * 0.13) % 3).toFixed(2)}s`
-        const dur   = `${(2.5 + (i * 0.07) % 2).toFixed(2)}s`
-        const size  = 6 + (i % 5) * 2
-        const shape = i % 3 === 0 ? '50%' : i % 3 === 1 ? '2px' : '0'
-        return (
-          <div key={i} style={{
-            position: 'absolute', top: 0, left,
-            width: size, height: size,
-            background: color,
-            borderRadius: shape,
-            animation: `confetti-fall ${dur} ${delay} ease-in infinite`,
-          }} />
-        )
-      })}
-    </div>
-  )
-}
 
 function pad(n: number) { return String(n).padStart(2, '0') }
 function formatDate(dateStr: string) {
@@ -204,7 +172,7 @@ function TripGrid({ events, weatherMap, onSelect, myName }: { events: Event[]; w
                   {/* Countdown */}
                   <div className="flex-shrink-0 w-16 text-center">
                     {isToday ? (
-                      <span className="text-2xl animate-bounce">🌴</span>
+                      <span className="text-2xl">🌴</span>
                     ) : departed ? (
                       <span className="text-xs font-bold text-white/30 uppercase tracking-wider leading-tight">Past</span>
                     ) : (
@@ -430,17 +398,11 @@ function EventSlide({ event, weather, myName }: { event: Event; weather: Weather
         )}
 
         {isToday ? (
-          <>
-            <Confetti />
-            <div className="my-6 space-y-3">
-              <p className="text-7xl animate-bounce">🌴</p>
-              <p className="text-4xl font-black drop-shadow" style={{ textShadow: '0 0 40px rgba(255,220,80,0.6)' }}>
-                Today's the day!
-              </p>
-              <p className="text-white/70 text-lg font-medium">Have the most amazing trip ✨</p>
-              <p className="text-white/40 text-sm mt-2">{event.name} awaits</p>
-            </div>
-          </>
+          <div className="my-10 space-y-3">
+            <p className="text-5xl">🌴</p>
+            <p className="text-4xl font-black drop-shadow">Today's the day!</p>
+            <p className="text-white/60 text-sm">Have an amazing trip</p>
+          </div>
         ) : departed ? (
           <div className="my-10 space-y-3">
             <p className="text-5xl">📸</p>
