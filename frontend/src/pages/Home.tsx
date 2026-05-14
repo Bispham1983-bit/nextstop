@@ -339,6 +339,12 @@ function TopBar({ onLogout }: { onLogout: () => void }) {
             </svg>
             Sign out
           </button>
+          <div className="px-4 py-2 border-t border-white/10">
+            <p className="text-white/20 text-[10px] tabular-nums">
+              Built {new Date(__BUILD_TIME__).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })}
+              {' · '}{new Date(__BUILD_TIME__).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+            </p>
+          </div>
         </div>
       )}
 

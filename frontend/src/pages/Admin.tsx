@@ -566,6 +566,11 @@ export function Admin() {
           </form>
         )}
 
+        <p className="text-white/15 text-[10px] text-center mt-8 tabular-nums">
+          Built {new Date(__BUILD_TIME__).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })}
+          {' · '}{new Date(__BUILD_TIME__).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+        </p>
+
       </div>
     </div>
   )
